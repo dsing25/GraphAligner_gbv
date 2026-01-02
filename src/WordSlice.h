@@ -1,6 +1,9 @@
 #ifndef WordSlice_h
 #define WordSlice_h
 
+template <typename LengthType, typename ScoreType, typename Word>
+class GraphAlignerBitvectorCommon;
+
 template <typename Word>
 class WordConfiguration
 {
@@ -242,9 +245,38 @@ public:
 		return (seqOffset + offset+1)*100 - getValue(offset) * errorCost;
 	}
 
+	// ScoreType getScoreBeforeStart() const
+	// {
+	// 	return scoreEnd - WordConfiguration<Word>::popcount(VP) + WordConfiguration<Word>::popcount(VN);
+	// }
+	__attribute__((noinline))
 	ScoreType getScoreBeforeStart() const
 	{
-		return scoreEnd - WordConfiguration<Word>::popcount(VP) + WordConfiguration<Word>::popcount(VN);
+		// // --- Debug logging block ---
+		// static long long getScoreBeforeStart_iteration = 0;
+		// getScoreBeforeStart_iteration++;
+		// if (getScoreBeforeStart_iteration % 1000000 == 0) {
+		// 	std::ofstream dbg("calculateSlice_debug.log", std::ios::app);
+		// 	dbg << "getScoreBeforeStart call #" << getScoreBeforeStart_iteration
+		// 		<< " | VP=" << VP
+		// 		<< " | VN=" << VN
+		// 		<< " | scoreEnd=" << scoreEnd
+		// 		<< std::endl;
+		// 	dbg.close();
+		// }
+		// // --- End debug logging block ---
+
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
+
+		regfile[1] = scoreEnd;
+		regfile[2] = VN;
+		regfile[3] = VP;
+		regfile[23] = WordConfiguration<Word>::popcount(VP);
+		regfile[24] = WordConfiguration<Word>::popcount(VN);
+		regfile[25] = regfile[1] - regfile[23];
+		regfile[25] = regfile[25] + regfile[24];
+
+		return regfile[25];
 	}
 
 #ifdef NDEBUG
@@ -497,47 +529,212 @@ private:
 		return result;
 	}
 
-#ifndef NDEBUG
-	__attribute__((always_inline))
-#endif
+// #ifndef NDEBUG
+// 	__attribute__((always_inline))
+// #endif
+	// static WordSlice mergeTwoSlices(WordSlice left, WordSlice right)
+	// {
+	// 	//O(log w), because prefix sums need log w chunks of log w bits
+	// 	static_assert(std::is_same<Word, uint64_t>::value);
+	// 	if (left.getScoreBeforeStart() > right.getScoreBeforeStart()) std::swap(left, right);
+	// 	assert((left.VP & left.VN) == WordConfiguration<Word>::AllZeros);
+	// 	assert((right.VP & right.VN) == WordConfiguration<Word>::AllZeros);
+	// 	auto masks = differenceMasks(left.VP, left.VN, right.VP, right.VN, right.getScoreBeforeStart() - left.getScoreBeforeStart());
+	// 	return mergeTwoSlices(left, right, masks.first, masks.second);
+	// }
+	__attribute__((noinline))
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right)
 	{
-		//O(log w), because prefix sums need log w chunks of log w bits
+
+		// // --- Debug logging block ---
+		// static int mergeTwoSlices_iteration = 0;
+		// mergeTwoSlices_iteration++;
+		// if (mergeTwoSlices_iteration % 500 == 0) {
+		// 	std::ofstream dbg("calculateSlice_debug.log", std::ios::app);
+		// 	dbg << "mergeTwoSlices_top call #" << mergeTwoSlices_iteration
+		// 		<< " | left.VP=" << left.VP
+		// 		<< " | left.VN=" << left.VN
+		// 		<< " | left.scoreEnd=" << left.scoreEnd
+		// 		<< " | right.VP=" << right.VP
+		// 		<< " | right.VN=" << right.VN
+		// 		<< " | right.scoreEnd=" << right.scoreEnd
+		// 		<< std::endl;
+		// 	dbg.close();
+		// }
+		// // --- End debug logging block ---
+
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 		static_assert(std::is_same<Word, uint64_t>::value);
-		if (left.getScoreBeforeStart() > right.getScoreBeforeStart()) std::swap(left, right);
-		assert((left.VP & left.VN) == WordConfiguration<Word>::AllZeros);
-		assert((right.VP & right.VN) == WordConfiguration<Word>::AllZeros);
-		auto masks = differenceMasks(left.VP, left.VN, right.VP, right.VN, right.getScoreBeforeStart() - left.getScoreBeforeStart());
-		return mergeTwoSlices(left, right, masks.first, masks.second);
+
+		regfile[12] = left.VN;
+		regfile[13] = left.VP;
+		regfile[14] = left.getScoreBeforeStart();
+		regfile[15] = left.scoreEnd;
+		regfile[16] = right.VN;
+		regfile[17] = right.VP;
+		regfile[18] = right.getScoreBeforeStart();
+		regfile[19] = right.scoreEnd;
+
+		if (regfile[14] > regfile[18]) // std::swap(left, right);
+		{ 
+			regfile[22] = regfile[12];
+			regfile[23] = regfile[13];
+			regfile[24] = regfile[15];
+			regfile[25] = regfile[14];
+
+			regfile[12] = regfile[16];
+			regfile[13] = regfile[17];
+			regfile[15] = regfile[19];
+			regfile[14] = regfile[18];
+			
+			regfile[16] = regfile[22];
+			regfile[17] = regfile[23];
+			regfile[19] = regfile[24];
+			regfile[18] = regfile[25];
+		}
+
+		assert((regfile[13] & regfile[12]) == WordConfiguration<Word>::AllZeros);
+		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
+		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[18] - regfile[14]);
+		regfile[20] = masks.first;
+		regfile[21] = masks.second;
+		left.VN = regfile[12];
+		left.VP = regfile[13];
+		left.scoreEnd = regfile[15];
+		right.VN = regfile[16];
+		right.VP = regfile[17];
+		right.scoreEnd = regfile[19];
+
+		return mergeTwoSlices(left, right, regfile[20], regfile[21]);
 	}
 
-#ifdef NDEBUG
-	__attribute__((always_inline))
-#endif
+// #ifdef NDEBUG
+// 	__attribute__((always_inline))
+// #endif
+	// static WordSlice mergeTwoSlices(WordSlice left, WordSlice right, Word leftSmaller, Word rightSmaller)
+	// {
+	// 	assert(left.getScoreBeforeStart() <= right.getScoreBeforeStart());
+	// 	WordSlice result;
+	// 	assert((left.VP & left.VN) == WordConfiguration<Word>::AllZeros);
+	// 	assert((right.VP & right.VN) == WordConfiguration<Word>::AllZeros);
+	// 	assert((leftSmaller & rightSmaller) == 0);
+	// 	auto mask = (rightSmaller | ((leftSmaller | rightSmaller) - (rightSmaller << 1))) & ~leftSmaller;
+	// 	uint64_t leftReduction = leftSmaller & (rightSmaller << 1);
+	// 	uint64_t rightReduction = rightSmaller & (leftSmaller << 1);
+	// 	if ((rightSmaller & 1) && left.getScoreBeforeStart() < right.getScoreBeforeStart())
+	// 	{
+	// 		rightReduction |= 1;
+	// 	}
+	// 	assert((leftReduction & right.VP) == leftReduction);
+	// 	assert((rightReduction & left.VP) == rightReduction);
+	// 	assert((leftReduction & left.VN) == leftReduction);
+	// 	assert((rightReduction & right.VN) == rightReduction);
+	// 	left.VN &= ~leftReduction;
+	// 	right.VN &= ~rightReduction;
+	// 	result.VN = (left.VN & ~mask) | (right.VN & mask);
+	// 	result.VP = (left.VP & ~mask) | (right.VP & mask);
+	// 	assert((result.VP & result.VN) == 0);
+	// 	result.scoreEnd = std::min(left.scoreEnd, right.scoreEnd);
+	// 	return result;
+	// }
+	
+	__attribute__((noinline))
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right, Word leftSmaller, Word rightSmaller)
 	{
-		assert(left.getScoreBeforeStart() <= right.getScoreBeforeStart());
+
+	// // --- Debug logging block ---
+	// static int mergeTwoSlices_iteration = 0;
+	// mergeTwoSlices_iteration++;
+	// if (mergeTwoSlices_iteration % 500 == 0) {
+	// 	std::ofstream dbg("calculateSlice_debug.log", std::ios::app);
+	// 	dbg << "mergeTwoSlices call #" << mergeTwoSlices_iteration
+	// 		<< " | left.VP=" << left.VP
+	// 		<< " | left.VN=" << left.VN
+	// 		<< " | left.scoreEnd=" << left.scoreEnd
+	// 		<< " | right.VP=" << right.VP
+	// 		<< " | right.VN=" << right.VN
+	// 		<< " | right.scoreEnd=" << right.scoreEnd
+	// 		<< " | leftSmaller=" << leftSmaller
+	// 		<< " | rightSmaller=" << rightSmaller
+	// 		<< std::endl;
+	// 	dbg.close();
+	// }
+	// // --- End debug logging block ---
+
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
+
 		WordSlice result;
-		assert((left.VP & left.VN) == WordConfiguration<Word>::AllZeros);
-		assert((right.VP & right.VN) == WordConfiguration<Word>::AllZeros);
-		assert((leftSmaller & rightSmaller) == 0);
-		auto mask = (rightSmaller | ((leftSmaller | rightSmaller) - (rightSmaller << 1))) & ~leftSmaller;
-		uint64_t leftReduction = leftSmaller & (rightSmaller << 1);
-		uint64_t rightReduction = rightSmaller & (leftSmaller << 1);
-		if ((rightSmaller & 1) && left.getScoreBeforeStart() < right.getScoreBeforeStart())
-		{
-			rightReduction |= 1;
-		}
-		assert((leftReduction & right.VP) == leftReduction);
-		assert((rightReduction & left.VP) == rightReduction);
-		assert((leftReduction & left.VN) == leftReduction);
-		assert((rightReduction & right.VN) == rightReduction);
-		left.VN &= ~leftReduction;
-		right.VN &= ~rightReduction;
-		result.VN = (left.VN & ~mask) | (right.VN & mask);
-		result.VP = (left.VP & ~mask) | (right.VP & mask);
-		assert((result.VP & result.VN) == 0);
-		result.scoreEnd = std::min(left.scoreEnd, right.scoreEnd);
+
+		regfile[12] = left.VN;
+		regfile[13] = left.VP;
+		regfile[14] = left.getScoreBeforeStart();
+		regfile[15] = left.scoreEnd;
+		regfile[16] = right.VN;
+		regfile[17] = right.VP;
+		regfile[18] = right.getScoreBeforeStart();
+		regfile[19] = right.scoreEnd;
+
+		new_temp9 = result.VN;
+		regfile[20]0 = result.VP;
+		regfile[20]1 = result.scoreEnd;
+
+		regfile[20] = leftSmaller;
+		regfile[21] = rightSmaller;
+
+		assert(regfile[14] <= regfile[18]);
+		assert((regfile[13] & regfile[12]) == WordConfiguration<Word>::AllZeros);
+
+		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
+		assert((regfile[20] & regfile[21]) == 0);
+
+		regfile[22] = regfile[20] | regfile[21]; // leftsmaller | rightsmaller
+		regfile[23] = regfile[21] << 1; // rightsmaller << 1
+		regfile[22] = regfile[22] - regfile[23]; // ((leftSmaller | rightSmaller) - (rightSmaller << 1))
+		regfile[22] = regfile[21] | regfile[22]; // rightsmaller | regfile25
+		regfile[23] = ~regfile[20]; // ~leftsmaller
+		regfile[22] = regfile[22] & regfile[23]; // reg23 = mask
+
+		regfile[23] = regfile[21] << 1; // rightsmaller << 1
+		regfile[23] = regfile[20] & regfile[23]; // leftreduction = reg24
+		regfile[24] = regfile[20] << 1; // leftsmaller << 1
+		regfile[24] = regfile[21] & regfile[24]; // rightreduction = reg25
+
+		// if ((regfile[21] & 1) && regfile[14] < regfile[18])
+		// {
+		// 	regfile[24] |= 1;
+		// }
+
+		regfile[24] = ((regfile[21] & 1) && (regfile[14] < regfile[18])) ? (regfile[24] | 1) : regfile[24];
+
+		assert((regfile[23] & regfile[17]) == regfile[23]); 
+		assert((regfile[24] & regfile[13]) == regfile[24]);  
+		assert((regfile[23] & regfile[12]) == regfile[23]);  
+		assert((regfile[24] & regfile[16]) == regfile[24]); 
+
+		regfile[25] = ~regfile[23]; // ~leftreduction
+		regfile[12] = regfile[12] & regfile[25]; // leftvn &= ~leftreduction
+		regfile[25] = ~regfile[24]; // ~rightreduction
+		regfile[16] = regfile[16] & regfile[25]; // rightvn &= ~rightreduction
+
+		regfile[25] = ~regfile[22]; //~mask
+		new_temp7 = regfile[12] & regfile[25]; // leftVN & ~mask
+		new_temp8 = regfile[16] & regfile[22]; // rightVN & mask
+		new_temp9 = new_temp7 | new_temp8; // (left.VN & ~mask) | (right.VN & mask);
+
+		new_temp7 = regfile[13] & regfile[25]; // leftVP & ~mask
+		new_temp8 = regfile[17] & regfile[22]; // rightVP & mask
+		regfile[20]0 = new_temp7 | new_temp8; // (left.VP & ~mask) | (right.VP & mask);
+
+		assert((new_temp9 & regfile[20]0) == 0);
+
+		regfile[20]1 = std::min(regfile[15], regfile[19]);
+		
+		result.VN = new_temp9;
+		result.VP = regfile[20]0;
+		result.scoreEnd = regfile[20]1;
+		left.VN = regfile[12];
+		right.VN = regfile[16];
+
 		return result;
 	}
 

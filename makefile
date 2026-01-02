@@ -4,8 +4,7 @@ PLATFORM=$(shell uname -s)
 GPP=$(CXX)
 BOOST_INCLUDE=$(CONDA_PREFIX)/include
 BOOST_LIB=$(CONDA_PREFIX)/lib
-CPPFLAGS=-Wall -Wextra -std=c++17 -O3 -g  -Iconcurrentqueue -IBBHash -Izstr/src -Iparallel-hashmap/parallel_hashmap/ `pkg-config --cflags protobuf` `pkg-config --cflags libsparsehash` -Wno-unused-parameter -IMEMfinder/src -I`jemalloc-config --includedir` -I$(BOOST_INCLUDE) -I$(CWD)/include/json/include 
-
+CPPFLAGS=-Wall -Wextra -std=c++17 -O0 -g -fno-omit-frame-pointer -Iconcurrentqueue -IBBHash -Izstr/src -Iparallel-hashmap/parallel_hashmap/ `pkg-config --cflags protobuf` `pkg-config --cflags libsparsehash` -Wno-unused-parameter -IMEMfinder/src -I`jemalloc-config --includedir` -I$(BOOST_INCLUDE) -I$(CWD)/include/json/include 
 ODIR=obj
 BINDIR=bin
 SRCDIR=src

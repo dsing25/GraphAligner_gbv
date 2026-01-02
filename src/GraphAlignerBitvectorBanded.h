@@ -63,6 +63,53 @@ public:
    * evertyhing above seems to be looking more at just extracting the alignment
    * information from the traces
    */
+
+//    // --- Add this function here ---
+//     void printGraphStructure() const {
+//         const AlignmentGraph& graph = params.graph;
+//         std::cout << "Graph has " << graph.NodeSize() << " nodes." << std::endl;
+//         for (size_t i = 0; i < graph.NodeSize(); ++i) {
+//             std::cout << "Node " << i << ": ";
+//             std::cout << "Name=" << graph.NodeName(i) << ", ";
+//             std::cout << "Length=" << graph.NodeLength(i) << ", ";
+//             std::cout << "Sequence=" << graph.NodeSequences(i, 0, graph.NodeLength(i)) << std::endl;
+//             std::cout << "  InNeighbors: ";
+//             for (auto n : graph.InNeighbors(i)) std::cout << n << " ";
+//             std::cout << "\n  OutNeighbors: ";
+//             for (auto n : graph.OutNeighbors(i)) std::cout << n << " ";
+//             std::cout << std::endl;
+//         }
+//     }
+//     // --- End function ---
+
+void printGraphStructureForNodes(const std::vector<size_t>& nodeIds) const {
+    const AlignmentGraph& graph = params.graph;
+    std::ofstream out("current_slice_nodes.txt", std::ios::app); // append mode
+    out << "Printing info for " << nodeIds.size() << " nodes in current slice:" << std::endl;
+    for (size_t nodeId : nodeIds) {
+        out << "Node " << nodeId << ": ";
+        // Use the public vector for node names
+        if (nodeId < graph.originalNodeName.size()) {
+            out << "Name=" << graph.originalNodeName[nodeId] << ", ";
+        } else {
+            out << "Name=UNKNOWN, ";
+        }
+        out << "Length=" << graph.NodeLength(nodeId) << ", ";
+        out << "Sequence=";
+        for (size_t i = 0; i < graph.NodeLength(nodeId); ++i) {
+            out << graph.NodeSequences(nodeId, i);
+        }
+        out << std::endl;
+        out << "  InNeighbors: ";
+        for (auto n : graph.InNeighbors(nodeId)) out << n << " ";
+        out << "\n  OutNeighbors: ";
+        for (auto n : graph.OutNeighbors(nodeId)) out << n << " ";
+        out << std::endl;
+    }
+    out.close();
+}
+
+
 	std::vector<OnewayTrace> getMultiseedTraces(
       const std::string_view& sequence,
       const std::string_view& bwSequence,
@@ -70,6 +117,14 @@ public:
       AlignerGraphsizedState& reusableState,
       std::vector<ScoreType>& sliceMaxScores) const
 	{
+
+	// // Print Sequence Output
+    // static size_t sequence_counter = 0;
+    // sequence_counter++;
+    // std::ofstream seq_out("multiseedtraces_sequence.txt", std::ios::app);
+    // seq_out << "Sequence #" << sequence_counter << ": " << sequence << std::endl;
+    // seq_out.close();
+
 		std::vector<OnewayTrace> traces = getMultiseedTracesOneWay(sequence, seedHits, reusableState, sliceMaxScores, reusableState.bigraphNodeForbiddenSpans);
 		std::vector<OnewayTrace> revTraces;
 		std::vector<std::tuple<size_t, int, int>> reverseForbiddenNodes;
@@ -330,8 +385,29 @@ private:
 	}
 
 	template <bool HasVectorMap, bool PreviousHasVectorMap, typename PriorityQueue>
+	__attribute__((noinline))
 	NodeCalculationResult calculateSlice(const std::string_view& sequence, const size_t j, NodeSlice<LengthType, ScoreType, Word, HasVectorMap>& currentSlice, const NodeSlice<LengthType, ScoreType, Word, PreviousHasVectorMap>& previousSlice, std::vector<bool>& currentBand, const std::vector<bool>& previousBand, PriorityQueue& calculableQueue, ScoreType previousQuitScore, ScoreType bandwidth, ScoreType previousMinScore, const std::vector<ProcessedSeedHit>& seedHits, size_t seedhitStart, size_t seedhitEnd, const WordSlice seedstartSlice, std::vector<bool>& hasSeedStart, std::unordered_set<size_t>& seedstartNodes, phmap::flat_hash_map<size_t, ScoreType>& nodeMaxExactEndposScore, bool storeNodeExactEndposScores, const std::vector<bool>& allowedBigraphNodesThisSlice) const
 	{
+
+
+
+		// std::ofstream calc_out("calculateslice_sequence.txt", std::ios::app);
+		// calc_out << "Offset: " << j << "Sequence: " << sequence << std::endl;
+		// calc_out.close();
+
+		// // --- Debug logging block ---
+		// static int calculateSlice_iteration = 0;
+		// calculateSlice_iteration++;
+		// if (calculateSlice_iteration % 5 == 0) {
+		// 	std::ofstream dbg("calculateSlice_debug.log", std::ios::app);
+		// 	dbg << "calculateSlice call #" << calculateSlice_iteration
+		// 		<< " | j=" << j
+		// 		<< " | calculableQueue.size()=" << calculableQueue.size()
+		// 		<< std::endl;
+		// 	dbg.close();
+		// }
+		// // --- End debug logging block ---
+
 		if (previousMinScore == std::numeric_limits<ScoreType>::max() - bandwidth - 1)
 		{
 			assert(seedstartSlice.scoreEnd != std::numeric_limits<ScoreType>::max());
@@ -490,6 +566,8 @@ private:
 				continue;
 			}
 			auto i = pair.target;
+			//NEW CODE ADDED FOR GRAPH DEBUG
+			printGraphStructureForNodes(std::vector<size_t>{i});
 			bool firstCalc = false;
 			assert(allowedBigraphNodesThisSlice[params.graph.BigraphNodeID(i)]);
 			if (!currentBand[i])
