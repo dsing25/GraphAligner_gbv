@@ -674,9 +674,9 @@ private:
 		regfile[18] = right.getScoreBeforeStart();
 		regfile[19] = right.scoreEnd;
 
-		new_temp9 = result.VN;
-		regfile[20]0 = result.VP;
-		regfile[20]1 = result.scoreEnd;
+		regfile[28] = result.VN;
+		regfile[29] = result.VP;
+		regfile[30] = result.scoreEnd;
 
 		regfile[20] = leftSmaller;
 		regfile[21] = rightSmaller;
@@ -717,21 +717,21 @@ private:
 		regfile[16] = regfile[16] & regfile[25]; // rightvn &= ~rightreduction
 
 		regfile[25] = ~regfile[22]; //~mask
-		new_temp7 = regfile[12] & regfile[25]; // leftVN & ~mask
-		new_temp8 = regfile[16] & regfile[22]; // rightVN & mask
-		new_temp9 = new_temp7 | new_temp8; // (left.VN & ~mask) | (right.VN & mask);
+		regfile[26] = regfile[12] & regfile[25]; // leftVN & ~mask
+		regfile[27] = regfile[16] & regfile[22]; // rightVN & mask
+		regfile[28] = regfile[26] | regfile[27]; // (left.VN & ~mask) | (right.VN & mask);
 
-		new_temp7 = regfile[13] & regfile[25]; // leftVP & ~mask
-		new_temp8 = regfile[17] & regfile[22]; // rightVP & mask
-		regfile[20]0 = new_temp7 | new_temp8; // (left.VP & ~mask) | (right.VP & mask);
+		regfile[26] = regfile[13] & regfile[25]; // leftVP & ~mask
+		regfile[27] = regfile[17] & regfile[22]; // rightVP & mask
+		regfile[29] = regfile[26] | regfile[27]; // (left.VP & ~mask) | (right.VP & mask);
 
-		assert((new_temp9 & regfile[20]0) == 0);
+		assert((regfile[28] & regfile[29]) == 0);
 
-		regfile[20]1 = std::min(regfile[15], regfile[19]);
+		regfile[30] = std::min(regfile[15], regfile[19]);
 		
-		result.VN = new_temp9;
-		result.VP = regfile[20]0;
-		result.scoreEnd = regfile[20]1;
+		result.VN = regfile[28];
+		result.VP = regfile[29];
+		result.scoreEnd = regfile[30];
 		left.VN = regfile[12];
 		right.VN = regfile[16];
 
