@@ -268,12 +268,12 @@ public:
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 
-		regfile[1] = scoreEnd;
+		regfile[11] = scoreEnd;
 		regfile[2] = VN;
 		regfile[3] = VP;
 		regfile[23] = WordConfiguration<Word>::popcount(VP);
 		regfile[24] = WordConfiguration<Word>::popcount(VN);
-		regfile[25] = regfile[1] - regfile[23];
+		regfile[25] = regfile[11] - regfile[23];
 		regfile[25] = regfile[25] + regfile[24];
 
 		return regfile[25];
@@ -595,7 +595,8 @@ private:
 
 		assert((regfile[13] & regfile[12]) == WordConfiguration<Word>::AllZeros);
 		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
-		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[18] - regfile[14]);
+		regfile[31] = regfile[18] - regfile[14];
+		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
 		regfile[20] = masks.first;
 		regfile[21] = masks.second;
 		left.VN = regfile[12];
@@ -685,6 +686,12 @@ private:
 		assert((regfile[13] & regfile[12]) == WordConfiguration<Word>::AllZeros);
 
 		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
+
+		std::cerr << "Assertion check: (regfile[20] & regfile[21]) == 0 failed\n";
+		std::cerr << "regfile[20] = 0x" << std::hex << regfile[20] << " (" << std::dec << regfile[20] << ")\n";
+		std::cerr << "regfile[21] = 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+		std::cerr << "regfile[20] & regfile[21] = 0x" << std::hex << (regfile[20] & regfile[21]) << " (" << std::dec << (regfile[20] & regfile[21]) << ")\n";
+
 		assert((regfile[20] & regfile[21]) == 0);
 
 		regfile[22] = regfile[20] | regfile[21]; // leftsmaller | rightsmaller
@@ -743,6 +750,21 @@ private:
 #endif
 	static std::pair<uint64_t, uint64_t> differenceMasks(uint64_t leftVP, uint64_t leftVN, uint64_t rightVP, uint64_t rightVN, int scoreDifference)
 	{
+/* 		// --- Debug logging block ---
+		static int differenceMasks_iteration = 0;
+		differenceMasks_iteration++;
+		if (differenceMasks_iteration % 500 == 0) {
+			std::ofstream dbg("calculateSlice_debug.log", std::ios::app);
+			dbg << "differenceMasks call #" << differenceMasks_iteration
+				<< " | leftVP=" << leftVP
+				<< " | leftVN=" << leftVN
+				<< " | rightVP=" << rightVP
+				<< " | rightVN=" << rightVN
+				<< " | scoreDifference=" << scoreDifference
+				<< std::endl;
+			dbg.close();
+		}
+		// --- End debug logging block --- */
 		auto result = differenceMasksBitTwiddle(leftVP, leftVN, rightVP, rightVN, scoreDifference);
 #ifdef EXTRACORRECTNESSASSERTIONS
 		auto debugCompare = differenceMasksWord(leftVP, leftVN, rightVP, rightVN, scoreDifference);
@@ -859,7 +881,208 @@ private:
 		assert(onesmaller == 0 || onebigger == 0);
 #endif
 		return std::make_pair(leftSmaller, rightSmaller);
-	}
+	} 
+
+/*
+#ifdef NDEBUG
+	__attribute__((always_inline))
+#endif
+	__attribute__((optimize("unroll-loops")))
+	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
+	{
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
+
+		regfile[12] = leftVN;
+		regfile[13] = leftVP;
+		regfile[16] = rightVN;
+		regfile[17] = rightVP;
+		regfile[22] = static_cast<Word>(scoreDifference); // DVS: This is an integer, may cause problems for later. Be careful. 
+
+		regfile[20] = 0; // leftSmaller
+		regfile[21] = 0; // rightSmaller
+
+		regfile[23] = regfile[13] & regfile[17]; // VPcommon
+		regfile[23] = ~regfile[23];
+
+		regfile[24] = regfile[12] & regfile[16]; // VNcommon
+		regfile[24] = ~regfile[24];
+
+		regfile[13] = regfile[13] & regfile[23]; // leftVP &= VPcommon;
+		regfile[12] = regfile[12] & regfile[24]; // leftVN &= VNcommon;
+
+		regfile[17] = regfile[17] & regfile[23]; // rightVP &= VPcommon;
+		regfile[16] = regfile[16] & regfile[24]; // rightVN &= VNcommon;
+
+		regfile[25] = regfile[12] & regfile[17]; // Word twosmaller = leftVN & rightVP; //left is two smaller
+
+		// Word onesmaller = (rightVP & ~leftVN) | (leftVN & ~rightVP);
+		regfile[26] = ~regfile[12]; // ~leftVN
+		regfile[26] = regfile[17] & regfile[26]; // rightVP & ~leftVN
+		regfile[27] = ~regfile[17]; // ~rightVP
+		regfile[27] = regfile[12] & regfile[27]; // leftVN & ~rightVP
+		regfile[26] = regfile[26] | regfile[27]; // onesmaller
+
+		// Word onebigger = (leftVP & ~rightVN) | (rightVN & ~leftVP);
+		regfile[27] = ~regfile[16];
+		regfile[27] = regfile[13] & regfile[27];
+		regfile[28] = ~regfile[13];
+		regfile[28] = regfile[28] & regfile[16];
+		regfile[27] = regfile[27] | regfile[28]; // onebigger
+
+		regfile[28] = regfile[16] & regfile[13]; // Word twobigger = rightVN & leftVP; //left is two bigger
+		
+		regfile[27] = regfile[27] | regfile[28]; // onebigger |= twobigger;
+		regfile[26] = regfile[26] | regfile[25]; // onesmaller |= twosmaller;
+	
+		//scoredifference is right - left
+		if (regfile[22] > 0)
+		{
+			//right is higher
+			for (int i = 1; i < regfile[22]; i++)
+			{
+				regfile[23] = regfile[27] - 1;
+				regfile[23] = ~regfile[23];
+				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
+				
+				regfile[24] = ~regfile[28];
+				regfile[24] = regfile[24] & regfile[23];
+				regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificant);
+
+				regfile[24] = ~regfile[23];
+				regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
+								
+				if (regfile[27] == 0)
+				{
+					return std::make_pair(WordConfiguration<Word>::AllOnes, WordConfiguration<Word>::AllZeros);
+				}
+			}
+
+			regfile[23] = regfile[27] - 1;
+			regfile[23] = ~regfile[23];
+			regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
+			
+			regfile[24] = regfile[23] - 1;
+			regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= leastSignificant - 1;
+
+			regfile[24] = ~regfile[28];
+			regfile[24] = regfile[24] & regfile[23];
+			regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificant);
+
+			regfile[24] = ~regfile[23];
+			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
+
+		}
+		else if (regfile[22] < 0)
+		{
+			//left is higher
+			for (int i = 1; i < -scoreDifference; i++)
+			{
+				regfile[23] = regfile[26] - 1;
+				regfile[23] = ~regfile[23];
+				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
+
+				regfile[24] = ~regfile[25];
+				regfile[24] = regfile[24] & regfile[23];
+				regfile[26] = regfile[26] ^ regfile[24]; // onesmaller ^= (~twosmaller & leastSignificant);
+
+				regfile[24] = ~regfile[23];
+				regfile[25] = regfile[25] & regfile[24]; // twosmaller &= ~leastSignificant;				
+				
+				if (regfile[26] == 0)
+				{
+					return std::make_pair(WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllOnes);
+				}
+			}
+			regfile[23] = regfile[26] - 1;
+			regfile[23] = ~regfile[23];
+			regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
+			
+			regfile[24] = regfile[23] - 1;
+			regfile[21] = regfile[24] | regfile[21]; // rightSmaller |= leastSignificant - 1;
+
+			regfile[24] = ~regfile[25];
+			regfile[24] = regfile[24] & regfile[23];
+			regfile[26] = regfile[26] ^ regfile[24]; // onesmaller ^= (~twosmaller & leastSignificant);
+
+			regfile[24] = ~regfile[23];
+			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
+		}
+		for (int i = 0; i < WordConfiguration<Word>::WordSize; i++)
+		{
+			if (regfile[26] == 0)
+			{
+				if (regfile[27] == 0) break;
+				regfile[23] = regfile[27] - 1;
+				regfile[23] = ~regfile[23];
+				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
+				
+				regfile[24] = ~regfile[23];
+				regfile[21] = regfile[24] | regfile[21]; // rightSmaller |= -leastSignificant;
+				
+				break;
+			}
+			if (regfile[27] == 0)
+			{
+#ifdef EXTRACORRECTNESSASSERTIONS
+				assert(onesmaller != 0);
+#endif
+				regfile[23] = regfile[26] - 1;
+				regfile[23] = ~regfile[23];
+				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
+
+				regfile[24] = ~regfile[23];
+				regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= -leastSignificant;
+				break;
+			}
+			regfile[29] = regfile[27] - 1;
+			regfile[29] = ~regfile[29];
+			regfile[29] = regfile[29] & regfile[27]; // Word leastSignificantBigger = onebigger & ~(onebigger - 1);
+
+			regfile[30] = regfile[26] - 1;
+			regfile[30] = ~regfile[30];
+			regfile[30] = regfile[30] & regfile[26];// Word leastSignificantSmaller = onesmaller & ~(onesmaller - 1);
+
+#ifdef EXTRACORRECTNESSASSERTIONS
+			assert((onebigger & leastSignificantBigger) != 0);
+			assert((onesmaller & leastSignificantSmaller) != 0);
+			assert(leastSignificantSmaller != leastSignificantBigger);
+			assert(leastSignificantSmaller != 0);
+			assert(leastSignificantBigger != 0);
+#endif
+			if (regfile[29] > regfile[30])
+			{
+				regfile[24] = regfile[29] - regfile[30];
+				regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= leastSignificantBigger - leastSignificantSmaller;
+			}
+			else
+			{
+				regfile[24] = regfile[30] - regfile[29];
+				regfile[21] = regfile[21] | regfile[24]; // rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
+			}
+			regfile[24] = ~regfile[28];
+			regfile[24] = regfile[29] & regfile[24];
+			regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificantBigger);
+
+			regfile[24] = ~regfile[29];
+			regfile[28] = regfile[28] & regfile[24]; //	twobigger &= ~leastSignificantBigger;
+
+			regfile[24] = ~regfile[25];
+			regfile[24] = regfile[24] & regfile[30];
+			regfile[26] = regfile[24] ^ regfile[26]; //	onesmaller ^= (~twosmaller & leastSignificantSmaller);
+
+			regfile[24] = ~regfile[30];
+			regfile[25] = regfile[25] & regfile[24]; //	twosmaller &= ~leastSignificantSmaller;
+		}
+#ifdef EXTRACORRECTNESSASSERTIONS
+		assert((leftSmaller & rightSmaller) == 0);
+		assert(onesmaller == 0 || onebigger == 0);
+#endif
+
+		return std::make_pair(regfile[20], regfile[21]);
+	} 
+	*/
+
+
 
 	static std::pair<uint64_t, uint64_t> differenceMasksWord(uint64_t leftVP, uint64_t leftVN, uint64_t rightVP, uint64_t rightVN, int scoreDifference)
 	{
