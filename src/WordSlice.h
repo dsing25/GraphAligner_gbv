@@ -596,15 +596,15 @@ private:
 		assert((regfile[13] & regfile[12]) == WordConfiguration<Word>::AllZeros);
 		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
 		regfile[31] = regfile[18] - regfile[14];
-		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
-		regfile[20] = masks.first;
-		regfile[21] = masks.second;
 		left.VN = regfile[12];
 		left.VP = regfile[13];
 		left.scoreEnd = regfile[15];
 		right.VN = regfile[16];
 		right.VP = regfile[17];
 		right.scoreEnd = regfile[19];
+		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
+		regfile[20] = masks.first;
+		regfile[21] = masks.second;
 
 		return mergeTwoSlices(left, right, regfile[20], regfile[21]);
 	}
@@ -687,11 +687,14 @@ private:
 
 		assert((regfile[17] & regfile[16]) == WordConfiguration<Word>::AllZeros);
 
-		std::cerr << "Assertion check: (regfile[20] & regfile[21]) == 0 failed\n";
-		std::cerr << "regfile[20] = 0x" << std::hex << regfile[20] << " (" << std::dec << regfile[20] << ")\n";
-		std::cerr << "regfile[21] = 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
-		std::cerr << "regfile[20] & regfile[21] = 0x" << std::hex << (regfile[20] & regfile[21]) << " (" << std::dec << (regfile[20] & regfile[21]) << ")\n";
-
+/* 		static int assert_print_count = 0;
+		if (assert_print_count < 5) {
+            std::cerr << "Assertion Check " << assert_print_count + 1 << "\n";
+			std::cerr << "regfile[20] = 0x" << std::hex << regfile[20] << " (" << std::dec << regfile[20] << ")\n";
+			std::cerr << "regfile[21] = 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+			std::cerr << "regfile[20] & regfile[21] = 0x" << std::hex << (regfile[20] & regfile[21]) << " (" << std::dec << (regfile[20] & regfile[21]) << ")\n";
+			assert_print_count++;
+} */
 		assert((regfile[20] & regfile[21]) == 0);
 
 		regfile[22] = regfile[20] | regfile[21]; // leftsmaller | rightsmaller
@@ -779,6 +782,8 @@ private:
 		return std::min(high, std::max(low, val));
 	}
 
+
+/*
 #ifdef NDEBUG
 	__attribute__((always_inline))
 #endif
@@ -787,18 +792,57 @@ private:
 	{
 		Word leftSmaller = 0;
 		Word rightSmaller = 0;
+
+			static int print_count_5 = 0;
+	if (print_count_5 < 5) {
+		std::cerr << "initial values " << print_count_5 + 1 << "\n";
+		std::cerr << "  leftVP: 0x" << std::hex << leftVP << " (" << std::dec << leftVP << ")\n";
+		std::cerr << "  rightVP: 0x" << std::hex << rightVP << " (" << std::dec << rightVP << ")\n";
+		std::cerr << "  leftVN: 0x" << std::hex << leftVN << " (" << std::dec << leftVN << ")\n";
+		std::cerr << "  rightVN: 0x" << std::hex << rightVN << " (" << std::dec << rightVN << ")\n";
+		print_count_5++;
+	}
+
 		Word VPcommon = ~(leftVP & rightVP);
 		Word VNcommon = ~(leftVN & rightVN);
 		leftVP &= VPcommon;
 		leftVN &= VNcommon;
 		rightVP &= VPcommon;
 		rightVN &= VNcommon;
+
+	static int print_count = 0;
+	if (print_count < 5) {
+		std::cerr << "Basic values " << print_count + 1 << "\n";
+		std::cerr << "  VPCommon: 0x" << std::hex << VPcommon << " (" << std::dec << VPcommon << ")\n";
+		std::cerr << "  VNCommon: 0x" << std::hex << VNcommon << " (" << std::dec << VNcommon << ")\n";
+		std::cerr << "  leftVP: 0x" << std::hex << leftVP << " (" << std::dec << leftVP << ")\n";
+		std::cerr << "  rightVP: 0x" << std::hex << rightVP << " (" << std::dec << rightVP << ")\n";
+		std::cerr << "  leftVN: 0x" << std::hex << leftVN << " (" << std::dec << leftVN << ")\n";
+		std::cerr << "  rightVN: 0x" << std::hex << rightVN << " (" << std::dec << rightVN << ")\n";
+		print_count++;
+	}
+
 		Word twosmaller = leftVN & rightVP; //left is two smaller
 		Word onesmaller = (rightVP & ~leftVN) | (leftVN & ~rightVP);
 		Word onebigger = (leftVP & ~rightVN) | (rightVN & ~leftVP);
 		Word twobigger = rightVN & leftVP; //left is two bigger
 		onebigger |= twobigger;
 		onesmaller |= twosmaller;
+
+					// DEBUG
+			static int print_count_1 = 0;
+			if (print_count_1 < 5) {
+            std::cerr << "diff Mask Initial " << print_count_1 + 1 << "\n";
+            std::cerr << "  leftSmaller: 0x" << std::hex << leftSmaller << " (" << std::dec << leftSmaller << ")\n";
+			std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
+            print_count_1++;
+        	}
+			//END DEBUG
+
 		//scoredifference is right - left
 		if (scoreDifference > 0)
 		{
@@ -808,15 +852,19 @@ private:
 				Word leastSignificant = onebigger & ~(onebigger - 1);
 				onebigger ^= (~twobigger & leastSignificant);
 				twobigger &= ~leastSignificant;
+
 				if (onebigger == 0)
 				{
 					return std::make_pair(WordConfiguration<Word>::AllOnes, WordConfiguration<Word>::AllZeros);
 				}
 			}
+
 			Word leastSignificant = onebigger & ~(onebigger - 1);
 			leftSmaller |= leastSignificant - 1;
 			onebigger ^= (~twobigger & leastSignificant);
 			twobigger &= ~leastSignificant;
+
+
 		}
 		else if (scoreDifference < 0)
 		{
@@ -835,14 +883,52 @@ private:
 			rightSmaller |= leastSignificant - 1;
 			onesmaller ^= (~twosmaller & leastSignificant);
 			twosmaller &= ~leastSignificant;
+
+						// DEBUG
+			static int print_count_2 = 0;
+			if (print_count_2 < 5) {
+            std::cerr << "[differenceMasksBitTwiddle] Iteration " << print_count_2 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
+            std::cerr << "  leastSignificant: 0x" << std::hex << leastSignificant << " (" << std::dec << leastSignificant << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
+            print_count_2++;
+        	}
+			//END DEBUG
 		}
 		for (int i = 0; i < WordConfiguration<Word>::WordSize; i++)
 		{
 			if (onesmaller == 0)
 			{
 				if (onebigger == 0) break;
+											// DEBUG
+			static int print_count_11 = 0;
+			if (print_count_11 < 5) {
+            std::cerr << " Line 870 initial " << print_count_11 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
+            print_count_11++;
+        	}
+			//END DEBUG
+
 				Word leastSignificant = onebigger & ~(onebigger - 1);
 				rightSmaller |= -leastSignificant;
+
+							// DEBUG
+			static int print_count_3 = 0;
+			if (print_count_3 < 5) {
+            std::cerr << " Line 870 " << print_count_3 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
+            std::cerr << "  leastSignificant: 0x" << std::hex << leastSignificant << " (" << std::dec << leastSignificant << ")\n";
+            std::cerr << "  -leastSignificant: 0x" << std::hex << -leastSignificant << " (" << std::dec << -leastSignificant << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
+            print_count_3++;
+        	}
+			//END DEBUG
 				break;
 			}
 			if (onebigger == 0)
@@ -852,6 +938,8 @@ private:
 #endif
 				Word leastSignificant = onesmaller & ~(onesmaller - 1);
 				leftSmaller |= -leastSignificant;
+
+
 				break;
 			}
 			Word leastSignificantBigger = onebigger & ~(onebigger - 1);
@@ -866,10 +954,27 @@ private:
 			if (leastSignificantBigger > leastSignificantSmaller)
 			{
 				leftSmaller |= leastSignificantBigger - leastSignificantSmaller;
+
 			}
 			else
 			{
 				rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
+
+				
+							// DEBUG
+			static int print_count_4 = 0;
+			if (print_count_4 < 100000) {
+            std::cerr << "[differenceMasksBitTwiddle] Line 900 " << print_count_4 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
+			std::cerr << "  leastSignificantBigger: 0x" << std::hex << leastSignificantBigger << " (" << std::dec << leastSignificantBigger << ")\n";
+			std::cerr << "  leastSignificantSmaller: 0x" << std::hex << leastSignificantSmaller << " (" << std::dec << leastSignificantSmaller << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
+            print_count_4++;
+        	}
+			//END DEBUG
 			}
 			onebigger ^= (~twobigger & leastSignificantBigger);
 			twobigger &= ~leastSignificantBigger;
@@ -882,8 +987,9 @@ private:
 #endif
 		return std::make_pair(leftSmaller, rightSmaller);
 	} 
+*/
 
-/*
+
 #ifdef NDEBUG
 	__attribute__((always_inline))
 #endif
@@ -891,7 +997,6 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
-
 		regfile[12] = leftVN;
 		regfile[13] = leftVP;
 		regfile[16] = rightVN;
@@ -900,6 +1005,22 @@ private:
 
 		regfile[20] = 0; // leftSmaller
 		regfile[21] = 0; // rightSmaller
+
+		// regfile[23] = 0;
+		// regfile[24] = 0;
+		// regfile[25] = 0;
+
+/* 		static int print_count_5 = 0;
+		if (print_count_5 < 5) {
+		std::cerr << "starting initial " << print_count_5 + 1 << "\n";
+		std::cerr << "  VPCommon: 0x" << std::hex << regfile[23] << " (" << std::dec << regfile[23] << ")\n";
+		std::cerr << "  VNCommon: 0x" << std::hex << regfile[24] << " (" << std::dec << regfile[24] << ")\n";
+		std::cerr << "  leftVP: 0x" << std::hex << regfile[13] << " (" << std::dec << regfile[13] << ")\n";
+		std::cerr << "  rightVP: 0x" << std::hex << regfile[17] << " (" << std::dec << regfile[17] << ")\n";
+		std::cerr << "  leftVN: 0x" << std::hex << regfile[12] << " (" << std::dec << regfile[12] << ")\n";
+		std::cerr << "  rightVN: 0x" << std::hex << regfile[16] << " (" << std::dec << regfile[16] << ")\n";
+		print_count_5++;
+		} */
 
 		regfile[23] = regfile[13] & regfile[17]; // VPcommon
 		regfile[23] = ~regfile[23];
@@ -913,9 +1034,25 @@ private:
 		regfile[17] = regfile[17] & regfile[23]; // rightVP &= VPcommon;
 		regfile[16] = regfile[16] & regfile[24]; // rightVN &= VNcommon;
 
+/* 		static int print_count = 0;
+		if (print_count < 5) {
+		std::cerr << "Basic values " << print_count + 1 << "\n";
+		std::cerr << "  VPCommon: 0x" << std::hex << regfile[23] << " (" << std::dec << regfile[23] << ")\n";
+		std::cerr << "  VNCommon: 0x" << std::hex << regfile[24] << " (" << std::dec << regfile[24] << ")\n";
+		std::cerr << "  leftVP: 0x" << std::hex << regfile[13] << " (" << std::dec << regfile[13] << ")\n";
+		std::cerr << "  rightVP: 0x" << std::hex << regfile[17] << " (" << std::dec << regfile[17] << ")\n";
+		std::cerr << "  leftVN: 0x" << std::hex << regfile[12] << " (" << std::dec << regfile[12] << ")\n";
+		std::cerr << "  rightVN: 0x" << std::hex << regfile[16] << " (" << std::dec << regfile[16] << ")\n";
+		print_count++;
+		}
+		// Verified */
+
 		regfile[25] = regfile[12] & regfile[17]; // Word twosmaller = leftVN & rightVP; //left is two smaller
 
 		// Word onesmaller = (rightVP & ~leftVN) | (leftVN & ~rightVP);
+		// regfile[26] = 0;
+		// regfile[27] = 0;
+		// regfile[28] = 0;
 		regfile[26] = ~regfile[12]; // ~leftVN
 		regfile[26] = regfile[17] & regfile[26]; // rightVP & ~leftVN
 		regfile[27] = ~regfile[17]; // ~rightVP
@@ -933,7 +1070,22 @@ private:
 		
 		regfile[27] = regfile[27] | regfile[28]; // onebigger |= twobigger;
 		regfile[26] = regfile[26] | regfile[25]; // onesmaller |= twosmaller;
-	
+		
+
+/* 		// DEBUG
+		static int print_count_1 = 0;
+		if (print_count_1 < 5) {
+		std::cerr << "Initial Values Diff Mask " << print_count_1 + 1 << "\n";
+		std::cerr << "  leftSmaller: 0x" << std::hex << regfile[20] << " (" << std::dec << regfile[20] << ")\n";
+		std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+		std::cerr << "  onebigger: 0x" << std::hex << regfile[27] << " (" << std::dec << regfile[27] << ")\n";
+		std::cerr << "  twobigger: 0x" << std::hex << regfile[28] << " (" << std::dec << regfile[28] << ")\n";
+		std::cerr << "  onesmaller: 0x" << std::hex << regfile[26] << " (" << std::dec << regfile[26] << ")\n";
+		std::cerr << "  twosmaller: 0x" << std::hex << regfile[25] << " (" << std::dec << regfile[25] << ")\n";
+		print_count_1++;
+		}
+		//END DEBUG */
+
 		//scoredifference is right - left
 		if (regfile[22] > 0)
 		{
@@ -971,6 +1123,8 @@ private:
 			regfile[24] = ~regfile[23];
 			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
 
+
+
 		}
 		else if (regfile[22] < 0)
 		{
@@ -1006,19 +1160,56 @@ private:
 
 			regfile[24] = ~regfile[23];
 			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
+
+/* 						// DEBUG
+			static int print_count_2 = 0;
+			if (print_count_2 < 5) {
+            std::cerr << "[differenceMasksBitTwiddle] Iteration " << print_count_2 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+            std::cerr << "  leastSignificant: 0x" << std::hex << regfile[23] << " (" << std::dec << regfile[23] << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << regfile[27] << " (" << std::dec << regfile[27] << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << regfile[28] << " (" << std::dec << regfile[28] << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << regfile[26] << " (" << std::dec << regfile[26] << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << regfile[25] << " (" << std::dec << regfile[25] << ")\n";
+            print_count_2++;
+        	}
+			//END DEBUG */
 		}
 		for (int i = 0; i < WordConfiguration<Word>::WordSize; i++)
 		{
 			if (regfile[26] == 0)
 			{
 				if (regfile[27] == 0) break;
+
+/* 				static int print_test = 0;
+				if (print_test < 5) {
+				std::cerr << " Line 870 Initial " << print_test + 1 << "\n";
+				std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+				print_test++;
+				} */
 				regfile[23] = regfile[27] - 1;
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
 				
-				regfile[24] = ~regfile[23];
-				regfile[21] = regfile[24] | regfile[21]; // rightSmaller |= -leastSignificant;
+				// regfile[24] = regfile[23]; // removed the negation
+				regfile[21] = regfile[21] | regfile[23]; // rightSmaller |= -leastSignificant;
 				
+
+/* 					// DEBUG
+				static int print_count_3 = 0;
+				if (print_count_3 < 5) {
+				std::cerr << " Line 870 " << print_count_3 + 1 << "\n";
+				std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+				std::cerr << "  leastSignificant: 0x" << std::hex << regfile[23] << " (" << std::dec << regfile[23] << ")\n";
+				std::cerr << "  -leastSignificant: 0x" << std::hex << regfile[24] << " (" << std::dec << regfile[24] << ")\n";
+				std::cerr << "  onebigger: 0x" << std::hex << regfile[27] << " (" << std::dec << regfile[27] << ")\n";
+				std::cerr << "  twobigger: 0x" << std::hex << regfile[28] << " (" << std::dec << regfile[28] << ")\n";
+				std::cerr << "  onesmaller: 0x" << std::hex << regfile[26] << " (" << std::dec << regfile[26] << ")\n";
+				std::cerr << "  twosmaller: 0x" << std::hex << regfile[25] << " (" << std::dec << regfile[25] << ")\n";
+				print_count_3++;
+				}
+				//END DEBUG */
+
 				break;
 			}
 			if (regfile[27] == 0)
@@ -1030,8 +1221,11 @@ private:
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
 
-				regfile[24] = ~regfile[23];
-				regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= -leastSignificant;
+				// regfile[24] = regfile[23]; // Removed the negation
+				regfile[20] = regfile[20] | regfile[23]; // leftSmaller |= -leastSignificant;
+
+
+
 				break;
 			}
 			regfile[29] = regfile[27] - 1;
@@ -1058,6 +1252,21 @@ private:
 			{
 				regfile[24] = regfile[30] - regfile[29];
 				regfile[21] = regfile[21] | regfile[24]; // rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
+
+/* 							// DEBUG
+			static int print_count_4 = 0;
+			if (print_count_4 < 100000) {
+            std::cerr << " Line 900 " << print_count_4 + 1 << "\n";
+            std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
+			std::cerr << "  leastSignificantBigger: 0x" << std::hex << regfile[29] << " (" << std::dec << regfile[29] << ")\n";
+			std::cerr << "  leastSignificantSmaller: 0x" << std::hex << regfile[30] << " (" << std::dec << regfile[30] << ")\n";
+            std::cerr << "  onebigger: 0x" << std::hex << regfile[27] << " (" << std::dec << regfile[27] << ")\n";
+            std::cerr << "  twobigger: 0x" << std::hex << regfile[28] << " (" << std::dec << regfile[28] << ")\n";
+            std::cerr << "  onesmaller: 0x" << std::hex << regfile[26] << " (" << std::dec << regfile[26] << ")\n";
+            std::cerr << "  twosmaller: 0x" << std::hex << regfile[25] << " (" << std::dec << regfile[25] << ")\n";
+            print_count_4++;
+        	}
+			//END DEBUG */
 			}
 			regfile[24] = ~regfile[28];
 			regfile[24] = regfile[29] & regfile[24];
@@ -1078,9 +1287,16 @@ private:
 		assert(onesmaller == 0 || onebigger == 0);
 #endif
 
+		//Word leftSmaller = regfile[20];
+		//Word rightSmaller = regfile[21];
+		// leftVP = regfile[13];
+		// leftVN = regfile[12];
+		// rightVP = regfile[17];
+		// rightVN = regfile[16];
+
 		return std::make_pair(regfile[20], regfile[21]);
 	} 
-	*/
+	
 
 
 
