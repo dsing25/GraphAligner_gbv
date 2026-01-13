@@ -14,6 +14,7 @@
 #include "WordSlice.h"
 #include "GraphAlignerCommon.h"
 #include "ArrayPriorityQueue.h"
+#include "DebugFlags.h"
 
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorCommon
@@ -28,6 +29,7 @@ private:
 	using EdgeWithPriority = typename Common::EdgeWithPriority;
 public:
 	using WordSlice = decltype(NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem::startSlice);
+	inline static Word regfile[32] = {0};
 
 	class EqVector
 	{
@@ -234,38 +236,232 @@ public:
 
 	GraphAlignerBitvectorCommon() = delete;
 
-#ifdef NDEBUG
-	__attribute__((always_inline))
-#endif
-	static inline std::tuple<WordSlice, Word, Word> getNextSlice(Word Eq, WordSlice slice, Word hinP, Word hinN)
+// #ifdef NDEBUG
+// 	__attribute__((always_inline))
+// #endif
+	// static inline std::tuple<WordSlice, Word, Word> getNextSlice(Word Eq, WordSlice slice, Word hinP, Word hinN)
+	// {
+	// 	//http://www.gersteinlab.org/courses/452/09-spring/pdf/Myers.pdf
+	// 	//pages 405 and 408
+
+	// 	Word Xv = Eq | slice.VN; //line 7
+	// 	Eq |= hinN; //between lines 7-8
+	// 	Word Xh = (((Eq & slice.VP) + slice.VP) ^ slice.VP) | Eq; //line 8
+	// 	Word Ph = slice.VN | ~(Xh | slice.VP); //line 9
+	// 	Word Mh = slice.VP & Xh; //line 10
+	// 	Word tempMh = (Mh << 1) | hinN; //line 16 + between lines 16-17
+	// 	hinN = Mh >> (WordConfiguration<Word>::WordSize-1); //line 11
+	// 	Word tempPh = (Ph << 1) | hinP; //line 15 + between lines 16-17
+	// 	slice.VP = tempMh | ~(Xv | tempPh); //line 17
+	// 	hinP = Ph >> (WordConfiguration<Word>::WordSize-1); //line 13
+	// 	slice.VN = tempPh & Xv; //line 18
+	// 	slice.scoreEnd -= hinN; //line 12
+	// 	slice.scoreEnd += hinP; //line 14
+
+	// 	return std::make_tuple(slice, Ph, Mh);
+	// }
+
+		
+static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(Word Eq, WordSlice slice, Word hinP, Word hinN)
+{
+		// --- Debug logging block ---
+		if (enableGetNextSliceDebug) {
+			getNextSliceIteration++;
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "getNextSlice call #" << getNextSliceIteration
+				<< " | Eq=" << Eq
+				<< " | hinP=" << hinP
+				<< " | hinN=" << hinN
+				<< " | slice.VN=" << slice.VN
+				<< " | slice.VP=" << slice.VP
+				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block ---
+
+	
+	Word Xh = 0, Xv = 0, tempMh = 0, tempPh = 0, Ph = 0, Mh = 0, temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0;
+
+	// Word regfile[32];
+
+	regfile[0] = 0;
+	regfile[1] = Eq;
+	regfile[2]  = slice.VN;
+	regfile[3]  = slice.VP;
+	regfile[4]  = hinN;
+	regfile[5]  = hinP;
+	regfile[6]  = Xh;
+	regfile[7]  = Xv;
+	regfile[8]  = Ph;
+	regfile[9]  = Mh;
+
+	//regfile[10] = scoreBefore;
+	regfile[11] = slice.scoreEnd;
+	// regfile[12] = child_vn;
+	// regfile[13] = child_vp;
+	// regfile[14] = child_sbefore;
+	// regfile[15] = child_send;
+	// regfile[16] = merged_vn;
+	// regfile[17] = merged_vp;
+	// regfile[18] = merged_sbef;
+	// regfile[19] = merged_send;
+	regfile[20] = temp1; 
+	regfile[21] = temp2;
+	regfile[22] = temp3;
+	regfile[23] = temp4;
+	regfile[24] = temp5;
+	// regfile[25] = temp6;
+	// regfile[26] = temp7;
+	// regfile[27] = temp8;
+	// regfile[28] = temp9;
+	// regfile[29] = temp10;
+	// regfile[30] = temp11;
+	// regfile[31] = temp12;
+
+	// main compute starts here
+
+	regfile[20] = tempMh; // use temp1 as tempMh
+	regfile[21] = tempPh; // use temp2 as tempPh
+
+	regfile[7] = regfile[1] | regfile[2]; 									// Xv = Eq | VN
+	regfile[1] = regfile[1] | regfile[4];             						// Eq |= hinN
+
+	regfile[22] = regfile[1] & regfile[3];      							// temp3 = Eq & VP
+	regfile[23] = regfile[22] + regfile[3];     							// temp4 = temp3 + VP
+	regfile[24] = regfile[23] ^ regfile[3];     							// temp5 = temp4 ^ VP
+	regfile[6]  = regfile[24] | regfile[1];     							// Xh = temp5 | Eq
+
+	regfile[22] = regfile[3] | regfile[6];      							// temp3 = VP | Xh
+	regfile[23] = ~regfile[22];                 							// temp4 = ~temp3
+	regfile[8]  = regfile[2] | regfile[23];     							// Ph = VN | temp4
+
+	regfile[9] = regfile[3] & regfile[6]; 									// Mh =  VP & Xh
+	regfile[22] = regfile[9] << 1;         									// temp3 = Mh << 1
+	regfile[20]  = regfile[22] | regfile[4]; 								// tempMh = temp3 | hinN
+
+	regfile[4]  = regfile[9] >> (WordConfiguration<Word>::WordSize-1); 										// hinN = Mh >> (word)
+	regfile[22] = regfile[8] << 1;                                       	// temp3 = Ph << 1
+	regfile[21] = regfile[22] | regfile[5];                              	// tempPh = temp3 | hinP
+
+	regfile[23] = regfile[7] | regfile[21];      							// temp4 = Xv | tempPh
+	regfile[24] = ~regfile[23];                  							// temp5 = ~temp4
+	regfile[3]  = regfile[20] | regfile[24];      							// VP = tempMh | temp5
+
+	regfile[5]  = regfile[8] >> (WordConfiguration<Word>::WordSize-1);        									// hinP = Ph >> (word)
+	regfile[2]  = regfile[21] & regfile[7];									// VN = tempPh & Xv
+
+	regfile[11] = regfile[11] - regfile[4]; 								// scoreEnd -= hinN
+	regfile[11] = regfile[11] + regfile[5]; 								// scoreEnd += hinP
+
+	slice.VN = regfile[2];
+	slice.VP = regfile[3];
+	slice.scoreEnd = regfile[11];
+	Ph = regfile[8];
+	Mh = regfile[9];
+
+	return std::make_tuple(slice, Ph, Mh);
+
+}
+
+	// static WordSlice flattenWordSlice(WordSlice slice, size_t row)
+	// {
+	// 	Word mask = ~(WordConfiguration<Word>::AllOnes << row);
+	// 	slice.scoreEnd -= WordConfiguration<Word>::popcount(slice.VP & ~mask);
+	// 	slice.scoreEnd += WordConfiguration<Word>::popcount(slice.VN & ~mask);
+	// 	slice.VP &= mask;
+	// 	slice.VN &= mask;
+	// 	return slice;
+	// }
+
+	static __attribute__((noinline)) WordSlice flattenWordSlice(WordSlice slice, size_t row)
 	{
-		//http://www.gersteinlab.org/courses/452/09-spring/pdf/Myers.pdf
-		//pages 405 and 408
 
-		Word Xv = Eq | slice.VN; //line 7
-		Eq |= hinN; //between lines 7-8
-		Word Xh = (((Eq & slice.VP) + slice.VP) ^ slice.VP) | Eq; //line 8
-		Word Ph = slice.VN | ~(Xh | slice.VP); //line 9
-		Word Mh = slice.VP & Xh; //line 10
-		Word tempMh = (Mh << 1) | hinN; //line 16 + between lines 16-17
-		hinN = Mh >> (WordConfiguration<Word>::WordSize-1); //line 11
-		Word tempPh = (Ph << 1) | hinP; //line 15 + between lines 16-17
-		slice.VP = tempMh | ~(Xv | tempPh); //line 17
-		hinP = Ph >> (WordConfiguration<Word>::WordSize-1); //line 13
-		slice.VN = tempPh & Xv; //line 18
-		slice.scoreEnd -= hinN; //line 12
-		slice.scoreEnd += hinP; //line 14
+		// --- Debug logging block ---
+		if (enableFlattenWordSliceDebug) {
+			flattenWordSliceIteration++;
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "flattenWordSlice call #" << flattenWordSliceIteration
+				<< " | row=" << row
+				<< " | slice.VN=" << slice.VN
+				<< " | slice.VP=" << slice.VP
+				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< std::endl;
+			dbg.close();
+		}
 
-		return std::make_tuple(slice, Ph, Mh);
-	}
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block ---
 
-	static WordSlice flattenWordSlice(WordSlice slice, size_t row)
-	{
-		Word mask = ~(WordConfiguration<Word>::AllOnes << row);
-		slice.scoreEnd -= WordConfiguration<Word>::popcount(slice.VP & ~mask);
-		slice.scoreEnd += WordConfiguration<Word>::popcount(slice.VN & ~mask);
-		slice.VP &= mask;
-		slice.VN &= mask;
+		Word mask = 0;
+
+		regfile[2] = slice.VN;
+		regfile[3] = slice.VP;
+		regfile[11] = slice.scoreEnd;
+		regfile[22] = row; // this would cause a bitshift that is unknown, implementing in ISA will be hard
+		regfile[23] = mask;
+
+		regfile[23] = WordConfiguration<Word>::AllOnes << regfile[22]; 
+		regfile[23] = ~regfile[23]; // gets mask
+
+		regfile[24] = ~regfile[23]; // gets ~mask
+		regfile[25] = regfile[3] & regfile[24]; // VP & ~mask
+		regfile[26] = WordConfiguration<Word>::popcount(regfile[25]); // popcount of vp & ~mask
+		regfile[11] = regfile[11] - regfile[26]; // update scoreend - popcount
+
+		regfile[25] = regfile[2] & regfile[24]; // VN & ~mask
+		regfile[26] = WordConfiguration<Word>::popcount(regfile[25]); // popcount of vn & ~mask
+		regfile[11] = regfile[11] + regfile[26]; // update scoreend + popcount
+
+		regfile[3] = regfile[3] & regfile[23];
+		regfile[2] = regfile[2] & regfile[23];
+
+		slice.VN = regfile[2];
+		slice.VP = regfile[3];
+		slice.scoreEnd = regfile[11];
+
 		return slice;
 	}
 
@@ -1226,11 +1422,46 @@ public:
 	}
 
 	template <typename NodeChunkType>
-#ifdef NDEBUG
-	__attribute__((always_inline))
-#endif
-	static NodeCalculationResult calculateNodeClipPrecise(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, const std::vector<bool>& previousBand, NodeChunkType nodeChunks, const WordSlice extraSlice, ScoreType seqOffset)
+// #ifdef NDEBUG
+// 	__attribute__((always_inline))
+// #endif
+	static __attribute__((noinline)) NodeCalculationResult calculateNodeClipPrecise(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, const std::vector<bool>& previousBand, NodeChunkType nodeChunks, const WordSlice extraSlice, ScoreType seqOffset)
 	{
+
+		// --- Debug logging block ---
+		if (enableCalculateNodeClipPreciseDebug) {
+			calculateNodeClipPreciseIteration++;
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "calculateNodeClipPrecise call #" << calculateNodeClipPreciseIteration
+				<< " | node i=" << i
+				<< " | seqOffset=" << seqOffset
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block ---
+
 		return calculateNodeInner<true>(params, i, slice, EqV, previousSlice, incoming, [&previousBand](size_t pos) { return previousBand[pos]; }, nodeChunks, extraSlice, [](const WordSlice& slice){}, seqOffset);
 	}
 
@@ -1241,11 +1472,46 @@ public:
    * using a subgraph as in vg. I believe they use the graph object instead.
    */
 	template <bool AllowEarlyLeave, typename NodeChunkType, typename WordsliceCallback, typename ExistenceCheckFunction>
-#ifdef NDEBUG
-	__attribute__((always_inline))
-#endif
-	static NodeCalculationResult calculateNodeInner(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, ExistenceCheckFunction bandCheck, NodeChunkType nodeChunks, const WordSlice extraSlice, WordsliceCallback callback, ScoreType seqOffset)
+// #ifdef NDEBUG
+// 	__attribute__((always_inline))
+// #endif
+	static __attribute__((noinline)) NodeCalculationResult calculateNodeInner(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, ExistenceCheckFunction bandCheck, NodeChunkType nodeChunks, const WordSlice extraSlice, WordsliceCallback callback, ScoreType seqOffset)
 	{
+
+		// --- Debug logging block ---
+		if (enableCalculateNodeInnerDebug) {
+			calculateNodeInnerIteration++;
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "calculateNodeInner call #" << calculateNodeInnerIteration
+				<< " | node i=" << i
+				<< " | AllowEarlyLeave=" << AllowEarlyLeave
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block ---
+
 		assert(incoming.size() > 0);
 		WordSlice newWs;
 		WordSlice ws;
