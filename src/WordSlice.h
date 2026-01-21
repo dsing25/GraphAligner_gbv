@@ -254,14 +254,25 @@ public:
 	__attribute__((noinline))
 	ScoreType getScoreBeforeStart() const
 	{
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 
-		// --- Debug logging block ---
+		regfile[11] = scoreEnd;
+		regfile[2] = VN;
+		regfile[3] = VP;
+		regfile[23] = WordConfiguration<Word>::popcount(VP);
+		regfile[24] = WordConfiguration<Word>::popcount(VN);
+		regfile[25] = regfile[11] - regfile[23];
+		regfile[25] = regfile[25] + regfile[24];
+
+		
+		/* // --- Debug logging block ---
 		if (enableGetScoreBeforeStartDebug) {
 			getScoreBeforeStartIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "getScoreBeforeStart call #" << getScoreBeforeStartIteration
 				<< " | VP=" << VP
 				<< " | VN=" << VN
+				<< " | regfile[25]=" << regfile[25]
 				<< " | scoreEnd=" << scoreEnd
 				<< std::endl;
 			dbg.close();
@@ -288,17 +299,7 @@ public:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
-
-		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
-
-		regfile[11] = scoreEnd;
-		regfile[2] = VN;
-		regfile[3] = VP;
-		regfile[23] = WordConfiguration<Word>::popcount(VP);
-		regfile[24] = WordConfiguration<Word>::popcount(VN);
-		regfile[25] = regfile[11] - regfile[23];
-		regfile[25] = regfile[25] + regfile[24];
+		// --- End debug logging block --- */
 
 		return regfile[25];
 	}
@@ -569,17 +570,31 @@ private:
 	__attribute__((noinline))
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right)
 	{
+		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
+		static_assert(std::is_same<Word, uint64_t>::value);
 
-		// --- Debug logging block ---
+		regfile[12] = left.VN;
+		regfile[13] = left.VP;
+		regfile[14] = left.getScoreBeforeStart();
+		regfile[15] = left.scoreEnd;
+		regfile[16] = right.VN;
+		regfile[17] = right.VP;
+		regfile[18] = right.getScoreBeforeStart();
+		regfile[19] = right.scoreEnd;
+
+		
+		/* // --- Debug logging block ---
 		if (enableMergeTwoSlices2InputDebug) {
 			mergeTwoSlices2InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input call #" << mergeTwoSlices2InputIteration
 				<< " | left.VP=" << left.VP
 				<< " | left.VN=" << left.VN
+				<< " | regfile[14] =" << regfile[14]
 				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP
-				<< " | right.VN=" << right.VN
+				<< " | right.VP=" << right.VP << std::endl;
+			dbg << " | right.VN=" << right.VN
+				<< " | regfile[18] =" << regfile[18]
 				<< " | right.scoreEnd=" << right.scoreEnd
 				<< std::endl;
 			dbg.close();
@@ -606,19 +621,7 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
-
-		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
-		static_assert(std::is_same<Word, uint64_t>::value);
-
-		regfile[12] = left.VN;
-		regfile[13] = left.VP;
-		regfile[14] = left.getScoreBeforeStart();
-		regfile[15] = left.scoreEnd;
-		regfile[16] = right.VN;
-		regfile[17] = right.VP;
-		regfile[18] = right.getScoreBeforeStart();
-		regfile[19] = right.scoreEnd;
+		// --- End debug logging block --- */
 
 		if (regfile[14] > regfile[18]) // std::swap(left, right);
 		{ 
@@ -647,6 +650,47 @@ private:
 		right.VN = regfile[16];
 		right.VP = regfile[17];
 		right.scoreEnd = regfile[19];
+
+		/* // --- Debug logging block ---
+		if (enableMergeTwoSlices2InputDebug) {
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "mergeTwoSlices2Input - Post Op call #" << mergeTwoSlices2InputIteration
+				<< " | left.VP=" << left.VP
+				<< " | left.VN=" << left.VN
+				<< " | regfile[14] =" << regfile[14]
+				<< " | left.scoreEnd=" << left.scoreEnd
+				<< " | right.VP=" << right.VP << std::endl;
+			dbg << " | right.VN=" << right.VN
+				<< " | regfile[18] =" << regfile[18]
+				<< " | regfile[31] =" << regfile[31]
+				<< " | right.scoreEnd=" << right.scoreEnd
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block --- */
+
 		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
 		regfile[20] = masks.first;
 		regfile[21] = masks.second;
@@ -688,7 +732,7 @@ private:
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right, Word leftSmaller, Word rightSmaller)
 	{
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableMergeTwoSlices4InputDebug) {
 			mergeTwoSlices4InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -696,8 +740,8 @@ private:
 				<< " | left.VP=" << left.VP
 				<< " | left.VN=" << left.VN
 				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP
-				<< " | right.VN=" << right.VN
+				<< " | right.VP=" << right.VP << std::endl;
+			dbg << " | right.VN=" << right.VN
 				<< " | right.scoreEnd=" << right.scoreEnd
 				<< " | leftSmaller=" << leftSmaller
 				<< " | rightSmaller=" << rightSmaller
@@ -726,7 +770,7 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 
@@ -817,6 +861,49 @@ private:
 		result.scoreEnd = regfile[30];
 		left.VN = regfile[12];
 		right.VN = regfile[16];
+
+		/* // --- Debug logging block ---
+		if (enableMergeTwoSlices4InputDebug) {
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "mergeTwoSlices4Input - Post Op call #" << mergeTwoSlices4InputIteration
+				<< " | left.VP=" << left.VP
+				<< " | left.VN=" << left.VN
+				<< " | left.scoreEnd=" << left.scoreEnd
+				<< " | right.VP=" << right.VP
+				<< " | right.VN=" << right.VN << std::endl;
+			dbg << " | right.scoreEnd=" << right.scoreEnd
+				<< " | leftSmaller=" << leftSmaller
+				<< " | rightSmaller=" << rightSmaller
+				<< " | result.VP=" << result.VP
+				<< " | result.VN=" << result.VN
+				<< " | result.scoreEnd=" << result.scoreEnd
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block --- */
+
 
 		return result;
 	}
@@ -1056,7 +1143,7 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableDifferenceMasksBitTwiddleDebug) {
 			differenceMasksBitTwiddleIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -1091,7 +1178,7 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 		regfile[12] = leftVN;
@@ -1275,8 +1362,6 @@ private:
 			{
 				regfile[24] = regfile[30] - regfile[29];
 				regfile[21] = regfile[21] | regfile[24]; // rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
-
-
 			}
 			regfile[24] = ~regfile[28];
 			regfile[24] = regfile[29] & regfile[24];

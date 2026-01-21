@@ -264,7 +264,7 @@ public:
 		
 static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(Word Eq, WordSlice slice, Word hinP, Word hinN)
 {
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableGetNextSliceDebug) {
 			getNextSliceIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -300,7 +300,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 	
 	Word Xh = 0, Xv = 0, tempMh = 0, tempPh = 0, Ph = 0, Mh = 0, temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0;
@@ -382,6 +382,43 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	Ph = regfile[8];
 	Mh = regfile[9];
 
+		/* // --- Debug logging block ---
+		if (enableGetNextSliceDebug) {
+			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
+			dbg << "getNextSlice - Post Op call #" << getNextSliceIteration
+				<< " | Eq=" << Eq
+				<< " | hinP=" << hinP
+				<< " | hinN=" << hinN
+				<< " | slice.VN=" << slice.VN
+				<< " | slice.VP=" << slice.VP
+				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< std::endl;
+			dbg.close();
+		}
+
+		if (
+			calculateSliceIteration >= 3 &&
+			getNextSliceIteration >= 3 &&
+			calculateNodeClipPreciseIteration >= 3 &&
+			calculateNodeInnerIteration >= 3 &&
+			getScoreBeforeStartIteration >= 3 &&
+			mergeTwoSlices2InputIteration >= 3 &&
+			mergeTwoSlices4InputIteration >= 3 &&
+			differenceMasksBitTwiddleIteration >= 3 &&
+			flattenWordSliceIteration >= 3
+		) {
+			enableCalculateSliceDebug = false;
+			enableGetNextSliceDebug = false;
+			enableCalculateNodeClipPreciseDebug = false;
+			enableCalculateNodeInnerDebug = false;
+			enableGetScoreBeforeStartDebug = false;
+			enableMergeTwoSlices2InputDebug = false;
+			enableMergeTwoSlices4InputDebug = false;
+			enableDifferenceMasksBitTwiddleDebug = false;
+			enableFlattenWordSliceDebug = false;
+		}
+		// --- End debug logging block --- */
+
 	return std::make_tuple(slice, Ph, Mh);
 
 }
@@ -399,7 +436,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	static __attribute__((noinline)) WordSlice flattenWordSlice(WordSlice slice, size_t row)
 	{
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableFlattenWordSliceDebug) {
 			flattenWordSliceIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -433,7 +470,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		Word mask = 0;
 
@@ -1428,7 +1465,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	static __attribute__((noinline)) NodeCalculationResult calculateNodeClipPrecise(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, const std::vector<bool>& previousBand, NodeChunkType nodeChunks, const WordSlice extraSlice, ScoreType seqOffset)
 	{
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableCalculateNodeClipPreciseDebug) {
 			calculateNodeClipPreciseIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -1460,7 +1497,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		return calculateNodeInner<true>(params, i, slice, EqV, previousSlice, incoming, [&previousBand](size_t pos) { return previousBand[pos]; }, nodeChunks, extraSlice, [](const WordSlice& slice){}, seqOffset);
 	}
@@ -1478,7 +1515,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	static __attribute__((noinline)) NodeCalculationResult calculateNodeInner(const Params& params, size_t i, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem& slice, const EqVector& EqV, typename NodeSlice<LengthType, ScoreType, Word, true>::NodeSliceMapItem previousSlice, const std::vector<EdgeWithPriority>& incoming, ExistenceCheckFunction bandCheck, NodeChunkType nodeChunks, const WordSlice extraSlice, WordsliceCallback callback, ScoreType seqOffset)
 	{
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableCalculateNodeInnerDebug) {
 			calculateNodeInnerIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -1510,7 +1547,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		assert(incoming.size() > 0);
 		WordSlice newWs;

@@ -387,7 +387,11 @@ private:
 
 	template <bool HasVectorMap, bool PreviousHasVectorMap, typename PriorityQueue>
 	__attribute__((noinline))
-	NodeCalculationResult calculateSlice(const std::string_view& sequence, const size_t j, NodeSlice<LengthType, ScoreType, Word, HasVectorMap>& currentSlice, const NodeSlice<LengthType, ScoreType, Word, PreviousHasVectorMap>& previousSlice, std::vector<bool>& currentBand, const std::vector<bool>& previousBand, PriorityQueue& calculableQueue, ScoreType previousQuitScore, ScoreType bandwidth, ScoreType previousMinScore, const std::vector<ProcessedSeedHit>& seedHits, size_t seedhitStart, size_t seedhitEnd, const WordSlice seedstartSlice, std::vector<bool>& hasSeedStart, std::unordered_set<size_t>& seedstartNodes, phmap::flat_hash_map<size_t, ScoreType>& nodeMaxExactEndposScore, bool storeNodeExactEndposScores, const std::vector<bool>& allowedBigraphNodesThisSlice) const
+	NodeCalculationResult calculateSlice(const std::string_view& sequence, const size_t j, NodeSlice<LengthType, ScoreType, Word, HasVectorMap>& currentSlice, 
+		const NodeSlice<LengthType, ScoreType, Word, PreviousHasVectorMap>& previousSlice, std::vector<bool>& currentBand, const std::vector<bool>& previousBand, 
+		PriorityQueue& calculableQueue, ScoreType previousQuitScore, ScoreType bandwidth, ScoreType previousMinScore, const std::vector<ProcessedSeedHit>& seedHits, 
+		size_t seedhitStart, size_t seedhitEnd, const WordSlice seedstartSlice, std::vector<bool>& hasSeedStart, std::unordered_set<size_t>& seedstartNodes, 
+		phmap::flat_hash_map<size_t, ScoreType>& nodeMaxExactEndposScore, bool storeNodeExactEndposScores, const std::vector<bool>& allowedBigraphNodesThisSlice) const
 	{
 
 
@@ -396,7 +400,7 @@ private:
 		// calc_out << "Offset: " << j << "Sequence: " << sequence << std::endl;
 		// calc_out.close();
 
-		// --- Debug logging block ---
+		/* // --- Debug logging block ---
 		if (enableCalculateSliceDebug) {
 			calculateSliceIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -428,7 +432,7 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block ---
+		// --- End debug logging block --- */
 
 		
 
@@ -577,6 +581,9 @@ private:
 
 		WordSlice fakeSlice { WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllZeros, std::numeric_limits<ScoreType>::max() };
 		ScoreType currentMinScoreAtEndRow = result.minScore;
+
+		// Main Queue Here 
+
 		while (calculableQueue.size() > 0)
 		{
 			auto pair = calculableQueue.top();
