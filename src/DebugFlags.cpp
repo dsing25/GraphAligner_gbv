@@ -26,3 +26,8 @@ uint64_t differenceMasksBitTwiddleIteration = 0;
 
 bool enableFlattenWordSliceDebug = true;
 uint64_t flattenWordSliceIteration = 0;
+
+uint64_t EqVectorIteration = 0;
+
+
+bool debugTop = true;

@@ -27,3 +27,8 @@ extern uint64_t differenceMasksBitTwiddleIteration;
 
 extern bool enableFlattenWordSliceDebug;
 extern uint64_t flattenWordSliceIteration;
+
+extern uint64_t EqVectorIteration;
+
+
+extern bool debugTop;

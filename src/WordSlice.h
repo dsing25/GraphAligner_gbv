@@ -265,7 +265,8 @@ public:
 		regfile[25] = regfile[25] + regfile[24];
 
 		
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableGetScoreBeforeStartDebug) {
 			getScoreBeforeStartIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -299,7 +300,8 @@ public:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 		return regfile[25];
 	}
@@ -583,7 +585,8 @@ private:
 		regfile[19] = right.scoreEnd;
 
 		
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableMergeTwoSlices2InputDebug) {
 			mergeTwoSlices2InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -621,7 +624,8 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 		if (regfile[14] > regfile[18]) // std::swap(left, right);
 		{ 
@@ -651,7 +655,8 @@ private:
 		right.VP = regfile[17];
 		right.scoreEnd = regfile[19];
 
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableMergeTwoSlices2InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input - Post Op call #" << mergeTwoSlices2InputIteration
@@ -689,7 +694,8 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
 		regfile[20] = masks.first;
@@ -732,7 +738,8 @@ private:
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right, Word leftSmaller, Word rightSmaller)
 	{
 
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableMergeTwoSlices4InputDebug) {
 			mergeTwoSlices4InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -770,7 +777,8 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 
@@ -862,7 +870,8 @@ private:
 		left.VN = regfile[12];
 		right.VN = regfile[16];
 
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableMergeTwoSlices4InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices4Input - Post Op call #" << mergeTwoSlices4InputIteration
@@ -902,7 +911,8 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 
 		return result;
@@ -1143,7 +1153,8 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 
-		/* // --- Debug logging block ---
+		// --- Debug logging block ---
+		if (debugTop == true) {
 		if (enableDifferenceMasksBitTwiddleDebug) {
 			differenceMasksBitTwiddleIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
@@ -1178,7 +1189,8 @@ private:
 			enableDifferenceMasksBitTwiddleDebug = false;
 			enableFlattenWordSliceDebug = false;
 		}
-		// --- End debug logging block --- */
+	}
+		// --- End debug logging block ---
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
 		regfile[12] = leftVN;
@@ -1229,7 +1241,8 @@ private:
 			//right is higher
 			for (int i = 1; i < regfile[22]; i++)
 			{
-				regfile[23] = regfile[27] - 1;
+				regfile[23] = 1;
+				regfile[23] = regfile[27] - regfile[23];
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
 				
@@ -1245,12 +1258,13 @@ private:
 					return std::make_pair(WordConfiguration<Word>::AllOnes, WordConfiguration<Word>::AllZeros);
 				}
 			}
-
-			regfile[23] = regfile[27] - 1;
+			regfile[23] = 1;
+			regfile[23] = regfile[27] - regfile[23];
 			regfile[23] = ~regfile[23];
 			regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
 			
-			regfile[24] = regfile[23] - 1;
+			regfile[30] = 1;
+			regfile[24] = regfile[23] - regfile[30];
 			regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= leastSignificant - 1;
 
 			regfile[24] = ~regfile[28];
@@ -1317,7 +1331,8 @@ private:
 			if (regfile[26] == 0)
 			{
 				if (regfile[27] == 0) break;
-				regfile[23] = regfile[27] - 1;
+				regfile[23] = 1;
+				regfile[23] = regfile[27] - regfile[23];
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
 				
@@ -1330,7 +1345,8 @@ private:
 #ifdef EXTRACORRECTNESSASSERTIONS
 				assert(onesmaller != 0);
 #endif
-				regfile[23] = regfile[26] - 1;
+				regfile[23] = 1;
+				regfile[23] = regfile[26] - regfile[23];
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
 
@@ -1338,11 +1354,13 @@ private:
 				regfile[20] = regfile[20] | regfile[23]; // leftSmaller |= -leastSignificant;
 				break;
 			}
-			regfile[29] = regfile[27] - 1;
+			regfile[23] = 1;
+			regfile[29] = regfile[27] - regfile[23];
 			regfile[29] = ~regfile[29];
 			regfile[29] = regfile[29] & regfile[27]; // Word leastSignificantBigger = onebigger & ~(onebigger - 1);
 
-			regfile[30] = regfile[26] - 1;
+			regfile[23] = 1;
+			regfile[30] = regfile[26] - regfile[23];
 			regfile[30] = ~regfile[30];
 			regfile[30] = regfile[30] & regfile[26];// Word leastSignificantSmaller = onesmaller & ~(onesmaller - 1);
 
