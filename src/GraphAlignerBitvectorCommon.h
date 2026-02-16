@@ -271,12 +271,12 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			getNextSliceIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "getNextSlice call #" << getNextSliceIteration
-				<< " | Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
-				<< " | hinP=" << hinP
-				<< " | hinN=" << hinN
-				<< " | slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
-				<< " | slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
-				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< "\n  Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
+				<< "\n  hinP=" << hinP
+				<< "\n  hinN=" << hinN
+				<< "\n  slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
+				<< "\n  slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
+				<< "\n  slice.scoreEnd=" << slice.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -390,12 +390,12 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		if (enableGetNextSliceDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "getNextSlice - Post Op call #" << getNextSliceIteration
-				<< " | Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
-				<< " | hinP=" << hinP
-				<< " | hinN=" << hinN
-				<< " | slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
-				<< " | slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
-				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< "\n  Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
+				<< "\n  hinP=" << hinP
+				<< "\n  hinN=" << hinN
+				<< "\n  slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
+				<< "\n  slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
+				<< "\n  slice.scoreEnd=" << slice.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -447,10 +447,10 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			flattenWordSliceIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "flattenWordSlice call #" << flattenWordSliceIteration
-				<< " | row=" << row
-				<< " | slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
-				<< " | slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
-				<< " | slice.scoreEnd=" << slice.scoreEnd
+				<< "\n  row=" << row
+				<< "\n  slice.VN=" << std::bitset<64>(slice.VN) << "(" << slice.VN << ")"
+				<< "\n  slice.VP=" << std::bitset<64>(slice.VP) << "(" << slice.VP << ")"
+				<< "\n  slice.scoreEnd=" << slice.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -562,12 +562,12 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		if (enableGetNextSliceDebug) {
 			EqVectorIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "EqVector call #" << EqVectorIteration << " | EqVector: ";
-			dbg << "BA=" << std::bitset<64>(EqV.getEqI(0)) << "(" << EqV.getEqI(0) << ") ";
-			dbg << "BT=" << std::bitset<64>(EqV.getEqI(1)) << "(" << EqV.getEqI(1) << ") ";
-			dbg << "BC=" << std::bitset<64>(EqV.getEqI(2)) << "(" << EqV.getEqI(2) << ") ";
-			dbg << "BG=" << std::bitset<64>(EqV.getEqI(3)) << "(" << EqV.getEqI(3) << ") ";
-			dbg << std::endl;
+			dbg << "EqVector call #" << EqVectorIteration
+				<< "\n  BA=" << std::bitset<64>(EqV.getEqI(0)) << "(" << EqV.getEqI(0) << ")"
+				<< "\n  BT=" << std::bitset<64>(EqV.getEqI(1)) << "(" << EqV.getEqI(1) << ")"
+				<< "\n  BC=" << std::bitset<64>(EqV.getEqI(2)) << "(" << EqV.getEqI(2) << ")"
+				<< "\n  BG=" << std::bitset<64>(EqV.getEqI(3)) << "(" << EqV.getEqI(3) << ")"
+				<< std::endl;
 			dbg.close();
 		}
 
@@ -1619,7 +1619,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 				if (enableCalculateNodeInnerDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "NodeInner Eq call #" << calculateNodeInnerIteration
-				<< " | Eq =" << std::bitset<64>(Eq) << "(" << Eq << ")"
+				<< "\n  Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
 				<< std::endl;
 			dbg.close();
 		}
@@ -2003,7 +2003,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 				if (enableCalculateNodeInnerDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "NodeInner Eq Second call #" << calculateNodeInnerIteration
-				<< " | Eq =" << std::bitset<64>(Eq) << "(" << Eq << ")"
+				<< "\n  Eq=" << std::bitset<64>(Eq) << "(" << Eq << ")"
 				<< std::endl;
 			dbg.close();
 		}
@@ -2062,8 +2062,8 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		if (enableCalculateNodeInnerDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "calculateNodeInner End #" << calculateNodeInnerIteration
-				<< " | hinP =" << std::bitset<64>(hinP) << "(" << hinP << ")"
-				<< " | hinN =" << std::bitset<64>(hinN) << "(" << hinN << ")"
+				<< "\n  hinP=" << std::bitset<64>(hinP) << "(" << hinP << ")"
+				<< "\n  hinN=" << std::bitset<64>(hinN) << "(" << hinN << ")"
 				<< std::endl;
 			dbg.close();
 		}

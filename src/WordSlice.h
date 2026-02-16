@@ -2,6 +2,7 @@
 #define WordSlice_h
 
 #include "DebugFlags.h"
+#include <bitset>
 
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorCommon;
@@ -271,10 +272,10 @@ public:
 			getScoreBeforeStartIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "getScoreBeforeStart call #" << getScoreBeforeStartIteration
-				<< " | VP=" << VP
-				<< " | VN=" << VN
-				<< " | regfile[25]=" << regfile[25]
-				<< " | scoreEnd=" << scoreEnd
+				<< "\n  VP=" << std::bitset<64>(VP) << "(" << VP << ")"
+				<< "\n  VN=" << std::bitset<64>(VN) << "(" << VN << ")"
+				<< "\n  regfile[25]=" << std::bitset<64>(regfile[25]) << "(" << regfile[25] << ")"
+				<< "| scoreEnd=" << scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -591,14 +592,14 @@ private:
 			mergeTwoSlices2InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input call #" << mergeTwoSlices2InputIteration
-				<< " | left.VP=" << left.VP
-				<< " | left.VN=" << left.VN
-				<< " | regfile[14] =" << regfile[14]
-				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP << std::endl;
-			dbg << " | right.VN=" << right.VN
-				<< " | regfile[18] =" << regfile[18]
-				<< " | right.scoreEnd=" << right.scoreEnd
+				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
+				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< "\n  regfile[14]=" << std::bitset<64>(regfile[14]) << "(" << regfile[14] << ")"
+				<< "\n  left.scoreEnd=" << left.scoreEnd
+				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
+				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< "\n  regfile[18]=" << std::bitset<64>(regfile[18]) << "(" << regfile[18] << ")"
+				<< "\n  right.scoreEnd=" << right.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -660,15 +661,15 @@ private:
 		if (enableMergeTwoSlices2InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input - Post Op call #" << mergeTwoSlices2InputIteration
-				<< " | left.VP=" << left.VP
-				<< " | left.VN=" << left.VN
-				<< " | regfile[14] =" << regfile[14]
-				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP << std::endl;
-			dbg << " | right.VN=" << right.VN
-				<< " | regfile[18] =" << regfile[18]
-				<< " | regfile[31] =" << regfile[31]
-				<< " | right.scoreEnd=" << right.scoreEnd
+				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
+				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< "\n  regfile[14]=" << std::bitset<64>(regfile[14]) << "(" << regfile[14] << ")"
+				<< "\n  left.scoreEnd=" << left.scoreEnd
+				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
+				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< "\n  regfile[18]=" << std::bitset<64>(regfile[18]) << "(" << regfile[18] << ")"
+				<< "\n  regfile[31]=" << std::bitset<64>(regfile[31]) << "(" << regfile[31] << ")"
+				<< "\n  right.scoreEnd=" << right.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -744,14 +745,14 @@ private:
 			mergeTwoSlices4InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices4Input call #" << mergeTwoSlices4InputIteration
-				<< " | left.VP=" << left.VP
-				<< " | left.VN=" << left.VN
-				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP << std::endl;
-			dbg << " | right.VN=" << right.VN
-				<< " | right.scoreEnd=" << right.scoreEnd
-				<< " | leftSmaller=" << leftSmaller
-				<< " | rightSmaller=" << rightSmaller
+				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
+				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< "\n  left.scoreEnd=" << left.scoreEnd
+				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
+				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< "\n  right.scoreEnd=" << right.scoreEnd
+				<< "\n  leftSmaller=" << std::bitset<64>(leftSmaller) << "(" << leftSmaller << ")"
+				<< "\n  rightSmaller=" << std::bitset<64>(rightSmaller) << "(" << rightSmaller << ")"
 				<< std::endl;
 			dbg.close();
 		}
@@ -875,17 +876,17 @@ private:
 		if (enableMergeTwoSlices4InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices4Input - Post Op call #" << mergeTwoSlices4InputIteration
-				<< " | left.VP=" << left.VP
-				<< " | left.VN=" << left.VN
-				<< " | left.scoreEnd=" << left.scoreEnd
-				<< " | right.VP=" << right.VP
-				<< " | right.VN=" << right.VN << std::endl;
-			dbg << " | right.scoreEnd=" << right.scoreEnd
-				<< " | leftSmaller=" << leftSmaller
-				<< " | rightSmaller=" << rightSmaller
-				<< " | result.VP=" << result.VP
-				<< " | result.VN=" << result.VN
-				<< " | result.scoreEnd=" << result.scoreEnd
+				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
+				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< "\n  left.scoreEnd=" << left.scoreEnd
+				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
+				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< "\n  right.scoreEnd=" << right.scoreEnd
+				<< "\n  leftSmaller=" << std::bitset<64>(leftSmaller) << "(" << leftSmaller << ")"
+				<< "\n  rightSmaller=" << std::bitset<64>(rightSmaller) << "(" << rightSmaller << ")"
+				<< "\n  result.VP=" << std::bitset<64>(result.VP) << "(" << result.VP << ")"
+				<< "\n  result.VN=" << std::bitset<64>(result.VN) << "(" << result.VN << ")"
+				<< "\n  result.scoreEnd=" << result.scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -1159,11 +1160,11 @@ private:
 			differenceMasksBitTwiddleIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "differenceMasks call #" << differenceMasksBitTwiddleIteration
-				<< " | leftVP=" << leftVP
-				<< " | leftVN=" << leftVN
-				<< " | rightVP=" << rightVP
-				<< " | rightVN=" << rightVN
-				<< " | scoreDifference=" << scoreDifference
+				<< "\n  leftVP=" << std::bitset<64>(leftVP) << "(" << leftVP << ")"
+				<< "\n  leftVN=" << std::bitset<64>(leftVN) << "(" << leftVN << ")"
+				<< "\n  rightVP=" << std::bitset<64>(rightVP) << "(" << rightVP << ")"
+				<< "\n  rightVN=" << std::bitset<64>(rightVN) << "(" << rightVN << ")"
+				<< "\n  scoreDifference=" << scoreDifference
 				<< std::endl;
 			dbg.close();
 		}
