@@ -30,4 +30,4 @@ uint64_t flattenWordSliceIteration = 0;
 uint64_t EqVectorIteration = 0;
 
 
-bool debugTop = true;
+bool debugTop = false;

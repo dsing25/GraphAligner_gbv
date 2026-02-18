@@ -4,6 +4,12 @@
 #include "DebugFlags.h"
 #include <bitset>
 
+// Helper macro: prints 64-bit binary(decimal) + hi/lo 32-bit split
+#define DBG_BITS(name, val) \
+	"\n  " name "=" << std::bitset<64>(val) << "(" << (val) << ")" \
+	<< "\n    [hi]=" << std::bitset<32>((uint64_t)(val) >> 32) << "(" << ((uint64_t)(val) >> 32) << ")" \
+	<< " [lo]=" << std::bitset<32>((uint64_t)(val) & 0xFFFFFFFF) << "(" << ((uint64_t)(val) & 0xFFFFFFFF) << ")"
+
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorCommon;
 
@@ -272,10 +278,10 @@ public:
 			getScoreBeforeStartIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "getScoreBeforeStart call #" << getScoreBeforeStartIteration
-				<< "\n  VP=" << std::bitset<64>(VP) << "(" << VP << ")"
-				<< "\n  VN=" << std::bitset<64>(VN) << "(" << VN << ")"
-				<< "\n  regfile[25]=" << std::bitset<64>(regfile[25]) << "(" << regfile[25] << ")"
-				<< "| scoreEnd=" << scoreEnd
+				<< DBG_BITS("VP", VP)
+				<< DBG_BITS("VN", VN)
+				<< DBG_BITS("regfile[25]", regfile[25])
+				<< "\n  scoreEnd=" << scoreEnd
 				<< std::endl;
 			dbg.close();
 		}
@@ -592,13 +598,13 @@ private:
 			mergeTwoSlices2InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input call #" << mergeTwoSlices2InputIteration
-				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
-				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
-				<< "\n  regfile[14]=" << std::bitset<64>(regfile[14]) << "(" << regfile[14] << ")"
+				<< DBG_BITS("left.VP", left.VP)
+				<< DBG_BITS("left.VN", left.VN)
+				<< DBG_BITS("regfile[14]", regfile[14])
 				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
-				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
-				<< "\n  regfile[18]=" << std::bitset<64>(regfile[18]) << "(" << regfile[18] << ")"
+				<< DBG_BITS("right.VP", right.VP)
+				<< DBG_BITS("right.VN", right.VN)
+				<< DBG_BITS("regfile[18]", regfile[18])
 				<< "\n  right.scoreEnd=" << right.scoreEnd
 				<< std::endl;
 			dbg.close();
@@ -661,14 +667,14 @@ private:
 		if (enableMergeTwoSlices2InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices2Input - Post Op call #" << mergeTwoSlices2InputIteration
-				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
-				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
-				<< "\n  regfile[14]=" << std::bitset<64>(regfile[14]) << "(" << regfile[14] << ")"
+				<< DBG_BITS("left.VP", left.VP)
+				<< DBG_BITS("left.VN", left.VN)
+				<< DBG_BITS("regfile[14]", regfile[14])
 				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
-				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
-				<< "\n  regfile[18]=" << std::bitset<64>(regfile[18]) << "(" << regfile[18] << ")"
-				<< "\n  regfile[31]=" << std::bitset<64>(regfile[31]) << "(" << regfile[31] << ")"
+				<< DBG_BITS("right.VP", right.VP)
+				<< DBG_BITS("right.VN", right.VN)
+				<< DBG_BITS("regfile[18]", regfile[18])
+				<< DBG_BITS("regfile[31]", regfile[31])
 				<< "\n  right.scoreEnd=" << right.scoreEnd
 				<< std::endl;
 			dbg.close();
@@ -745,14 +751,14 @@ private:
 			mergeTwoSlices4InputIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices4Input call #" << mergeTwoSlices4InputIteration
-				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
-				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< DBG_BITS("left.VP", left.VP)
+				<< DBG_BITS("left.VN", left.VN)
 				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
-				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< DBG_BITS("right.VP", right.VP)
+				<< DBG_BITS("right.VN", right.VN)
 				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< "\n  leftSmaller=" << std::bitset<64>(leftSmaller) << "(" << leftSmaller << ")"
-				<< "\n  rightSmaller=" << std::bitset<64>(rightSmaller) << "(" << rightSmaller << ")"
+				<< DBG_BITS("leftSmaller", leftSmaller)
+				<< DBG_BITS("rightSmaller", rightSmaller)
 				<< std::endl;
 			dbg.close();
 		}
@@ -876,16 +882,16 @@ private:
 		if (enableMergeTwoSlices4InputDebug) {
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "mergeTwoSlices4Input - Post Op call #" << mergeTwoSlices4InputIteration
-				<< "\n  left.VP=" << std::bitset<64>(left.VP) << "(" << left.VP << ")"
-				<< "\n  left.VN=" << std::bitset<64>(left.VN) << "(" << left.VN << ")"
+				<< DBG_BITS("left.VP", left.VP)
+				<< DBG_BITS("left.VN", left.VN)
 				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< "\n  right.VP=" << std::bitset<64>(right.VP) << "(" << right.VP << ")"
-				<< "\n  right.VN=" << std::bitset<64>(right.VN) << "(" << right.VN << ")"
+				<< DBG_BITS("right.VP", right.VP)
+				<< DBG_BITS("right.VN", right.VN)
 				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< "\n  leftSmaller=" << std::bitset<64>(leftSmaller) << "(" << leftSmaller << ")"
-				<< "\n  rightSmaller=" << std::bitset<64>(rightSmaller) << "(" << rightSmaller << ")"
-				<< "\n  result.VP=" << std::bitset<64>(result.VP) << "(" << result.VP << ")"
-				<< "\n  result.VN=" << std::bitset<64>(result.VN) << "(" << result.VN << ")"
+				<< DBG_BITS("leftSmaller", leftSmaller)
+				<< DBG_BITS("rightSmaller", rightSmaller)
+				<< DBG_BITS("result.VP", result.VP)
+				<< DBG_BITS("result.VN", result.VN)
 				<< "\n  result.scoreEnd=" << result.scoreEnd
 				<< std::endl;
 			dbg.close();
@@ -940,7 +946,7 @@ private:
 	}
 
 
-/*
+/* 
 #ifdef NDEBUG
 	__attribute__((always_inline))
 #endif
@@ -1041,51 +1047,15 @@ private:
 			onesmaller ^= (~twosmaller & leastSignificant);
 			twosmaller &= ~leastSignificant;
 
-						// DEBUG
-			static int print_count_2 = 0;
-			if (print_count_2 < 5) {
-            std::cerr << "[differenceMasksBitTwiddle] Iteration " << print_count_2 + 1 << "\n";
-            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
-            std::cerr << "  leastSignificant: 0x" << std::hex << leastSignificant << " (" << std::dec << leastSignificant << ")\n";
-            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
-            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
-            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
-            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
-            print_count_2++;
-        	}
-			//END DEBUG
 		}
 		for (int i = 0; i < WordConfiguration<Word>::WordSize; i++)
 		{
 			if (onesmaller == 0)
 			{
 				if (onebigger == 0) break;
-											// DEBUG
-			static int print_count_11 = 0;
-			if (print_count_11 < 5) {
-            std::cerr << " Line 870 initial " << print_count_11 + 1 << "\n";
-            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
-            print_count_11++;
-        	}
-			//END DEBUG
 
 				Word leastSignificant = onebigger & ~(onebigger - 1);
 				rightSmaller |= -leastSignificant;
-
-							// DEBUG
-			static int print_count_3 = 0;
-			if (print_count_3 < 5) {
-            std::cerr << " Line 870 " << print_count_3 + 1 << "\n";
-            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
-            std::cerr << "  leastSignificant: 0x" << std::hex << leastSignificant << " (" << std::dec << leastSignificant << ")\n";
-            std::cerr << "  -leastSignificant: 0x" << std::hex << -leastSignificant << " (" << std::dec << -leastSignificant << ")\n";
-            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
-            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
-            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
-            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
-            print_count_3++;
-        	}
-			//END DEBUG
 				break;
 			}
 			if (onebigger == 0)
@@ -1095,8 +1065,6 @@ private:
 #endif
 				Word leastSignificant = onesmaller & ~(onesmaller - 1);
 				leftSmaller |= -leastSignificant;
-
-
 				break;
 			}
 			Word leastSignificantBigger = onebigger & ~(onebigger - 1);
@@ -1111,27 +1079,11 @@ private:
 			if (leastSignificantBigger > leastSignificantSmaller)
 			{
 				leftSmaller |= leastSignificantBigger - leastSignificantSmaller;
-
 			}
 			else
 			{
 				rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
 
-				
-							// DEBUG
-			static int print_count_4 = 0;
-			if (print_count_4 < 100000) {
-            std::cerr << "[differenceMasksBitTwiddle] Line 900 " << print_count_4 + 1 << "\n";
-            std::cerr << "  rightSmaller: 0x" << std::hex << rightSmaller << " (" << std::dec << rightSmaller << ")\n";
-			std::cerr << "  leastSignificantBigger: 0x" << std::hex << leastSignificantBigger << " (" << std::dec << leastSignificantBigger << ")\n";
-			std::cerr << "  leastSignificantSmaller: 0x" << std::hex << leastSignificantSmaller << " (" << std::dec << leastSignificantSmaller << ")\n";
-            std::cerr << "  onebigger: 0x" << std::hex << onebigger << " (" << std::dec << onebigger << ")\n";
-            std::cerr << "  twobigger: 0x" << std::hex << twobigger << " (" << std::dec << twobigger << ")\n";
-            std::cerr << "  onesmaller: 0x" << std::hex << onesmaller << " (" << std::dec << onesmaller << ")\n";
-            std::cerr << "  twosmaller: 0x" << std::hex << twosmaller << " (" << std::dec << twosmaller << ")\n";
-            print_count_4++;
-        	}
-			//END DEBUG
 			}
 			onebigger ^= (~twobigger & leastSignificantBigger);
 			twobigger &= ~leastSignificantBigger;
@@ -1143,8 +1095,8 @@ private:
 		assert(onesmaller == 0 || onebigger == 0);
 #endif
 		return std::make_pair(leftSmaller, rightSmaller);
-	} 
-*/
+	}  */
+
 
 
 #ifdef NDEBUG
@@ -1153,6 +1105,21 @@ private:
 	__attribute__((optimize("unroll-loops")))
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
+		// Diffmasks logging - only first 5 calls
+		static int diffmasks_call_count = 0;
+		diffmasks_call_count++;
+		bool should_log = (diffmasks_call_count <= 5);
+		std::ofstream difflog;
+		if (should_log) {
+			difflog.open("diffmasks.log", std::ios::app);
+			difflog << "\n========== differenceMasksBitTwiddle CALL #" << diffmasks_call_count << " ==========\n";
+			difflog << "INPUTS:"
+				<< DBG_BITS("leftVP", leftVP)
+				<< DBG_BITS("leftVN", leftVN)
+				<< DBG_BITS("rightVP", rightVP)
+				<< DBG_BITS("rightVN", rightVN)
+				<< "\n  scoreDifference=" << scoreDifference << "\n";
+		}
 
 		// --- Debug logging block ---
 		if (debugTop == true) {
@@ -1160,10 +1127,10 @@ private:
 			differenceMasksBitTwiddleIteration++;
 			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
 			dbg << "differenceMasks call #" << differenceMasksBitTwiddleIteration
-				<< "\n  leftVP=" << std::bitset<64>(leftVP) << "(" << leftVP << ")"
-				<< "\n  leftVN=" << std::bitset<64>(leftVN) << "(" << leftVN << ")"
-				<< "\n  rightVP=" << std::bitset<64>(rightVP) << "(" << rightVP << ")"
-				<< "\n  rightVN=" << std::bitset<64>(rightVN) << "(" << rightVN << ")"
+				<< DBG_BITS("leftVP", leftVP)
+				<< DBG_BITS("leftVN", leftVN)
+				<< DBG_BITS("rightVP", rightVP)
+				<< DBG_BITS("rightVN", rightVN)
 				<< "\n  scoreDifference=" << scoreDifference
 				<< std::endl;
 			dbg.close();
@@ -1198,24 +1165,66 @@ private:
 		regfile[13] = leftVP;
 		regfile[16] = rightVN;
 		regfile[17] = rightVP;
-		regfile[22] = static_cast<Word>(scoreDifference); // DVS: This is an integer, may cause problems for later. Be careful. 
+		regfile[22] = static_cast<Word>(scoreDifference); // DVS: This is an integer, may cause problems for later. Be careful.
+
+		if (should_log) {
+			difflog << "\nREGISTER INITIALIZATION:"
+				<< DBG_BITS("reg[12]=leftVN", regfile[12])
+				<< DBG_BITS("reg[13]=leftVP", regfile[13])
+				<< DBG_BITS("reg[16]=rightVN", regfile[16])
+				<< DBG_BITS("reg[17]=rightVP", regfile[17])
+				<< DBG_BITS("reg[22]=scoreDiff", regfile[22]) << "\n";
+		}
 
 		regfile[20] = 0; // leftSmaller
 		regfile[21] = 0; // rightSmaller
 
+		if (should_log) {
+			difflog << "\nINITIAL OUTPUT MASKS:"
+				<< DBG_BITS("reg[20]=leftSmaller", regfile[20])
+				<< DBG_BITS("reg[21]=rightSmaller", regfile[21]) << "\n";
+		}
+
 		regfile[23] = regfile[13] & regfile[17]; // VPcommon
 		regfile[23] = ~regfile[23];
+
+		if (should_log) {
+			difflog << "\nVPCOMMON:"
+				<< DBG_BITS("reg[23]=~(leftVP&rightVP)", regfile[23]) << "\n";
+		}
 
 		regfile[24] = regfile[12] & regfile[16]; // VNcommon
 		regfile[24] = ~regfile[24];
 
+		if (should_log) {
+			difflog << "\nVNCOMMON:"
+				<< DBG_BITS("reg[24]=~(leftVN&rightVN)", regfile[24]) << "\n";
+		}
+
 		regfile[13] = regfile[13] & regfile[23]; // leftVP &= VPcommon;
 		regfile[12] = regfile[12] & regfile[24]; // leftVN &= VNcommon;
+
+		if (should_log) {
+			difflog << "\nAPPLY COMMON MASKS TO LEFT:"
+				<< DBG_BITS("reg[13]=leftVP&VPcommon", regfile[13])
+				<< DBG_BITS("reg[12]=leftVN&VNcommon", regfile[12]) << "\n";
+		}
 
 		regfile[17] = regfile[17] & regfile[23]; // rightVP &= VPcommon;
 		regfile[16] = regfile[16] & regfile[24]; // rightVN &= VNcommon;
 
+		if (should_log) {
+			difflog << "\nAPPLY COMMON MASKS TO RIGHT:"
+				<< DBG_BITS("reg[17]=rightVP&VPcommon", regfile[17])
+				<< DBG_BITS("reg[16]=rightVN&VNcommon", regfile[16]) << "\n";
+		}
+
 		regfile[25] = regfile[12] & regfile[17]; // Word twosmaller = leftVN & rightVP; //left is two smaller
+
+		if (should_log) {
+			difflog << "\nTWOSMALLER:"
+				<< DBG_BITS("reg[25]=leftVN&rightVP", regfile[25]) << "\n";
+		}
 
 		// Word onesmaller = (rightVP & ~leftVN) | (leftVN & ~rightVP);
 		regfile[26] = ~regfile[12]; // ~leftVN
@@ -1224,6 +1233,11 @@ private:
 		regfile[27] = regfile[12] & regfile[27]; // leftVN & ~rightVP
 		regfile[26] = regfile[26] | regfile[27]; // onesmaller
 
+		if (should_log) {
+			difflog << "\nONESMALLER:"
+				<< DBG_BITS("reg[26]=(rightVP&~leftVN)|(leftVN&~rightVP)", regfile[26]) << "\n";
+		}
+
 		// Word onebigger = (leftVP & ~rightVN) | (rightVN & ~leftVP);
 		regfile[27] = ~regfile[16];
 		regfile[27] = regfile[13] & regfile[27];
@@ -1231,118 +1245,247 @@ private:
 		regfile[28] = regfile[28] & regfile[16];
 		regfile[27] = regfile[27] | regfile[28]; // onebigger
 
+		if (should_log) {
+			difflog << "\nONEBIGGER:"
+				<< DBG_BITS("reg[27]=(leftVP&~rightVN)|(rightVN&~leftVP)", regfile[27]) << "\n";
+		}
+
 		regfile[28] = regfile[16] & regfile[13]; // Word twobigger = rightVN & leftVP; //left is two bigger
-		
+
+		if (should_log) {
+			difflog << "\nTWOBIGGER:"
+				<< DBG_BITS("reg[28]=rightVN&leftVP", regfile[28]) << "\n";
+		}
+
 		regfile[27] = regfile[27] | regfile[28]; // onebigger |= twobigger;
 		regfile[26] = regfile[26] | regfile[25]; // onesmaller |= twosmaller;
+
+		if (should_log) {
+			difflog << "\nCOMBINE ONE+TWO:"
+				<< DBG_BITS("reg[27]=onebigger|twobigger", regfile[27])
+				<< DBG_BITS("reg[26]=onesmaller|twosmaller", regfile[26]) << "\n";
+		}
 		
 		//scoredifference is right - left
 		if (regfile[22] > 0)
 		{
+			if (should_log) {
+				difflog << "\n=== RIGHT IS HIGHER BRANCH (scoreDiff > 0) ===\n";
+			}
+
 			//right is higher
 			for (int i = 1; i < regfile[22]; i++)
 			{
+				if (should_log) {
+					difflog << "\n--- Loop iteration i=" << i << " ---\n";
+				}
+
 				regfile[23] = 1;
 				regfile[23] = regfile[27] - regfile[23];
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
-				
+
+				if (should_log) {
+					difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+				}
+
 				regfile[24] = ~regfile[28];
 				regfile[24] = regfile[24] & regfile[23];
 				regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificant);
 
+				if (should_log) {
+					difflog << "  onebigger after XOR:" << DBG_BITS("reg[27]", regfile[27]) << "\n";
+				}
+
 				regfile[24] = ~regfile[23];
 				regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
-								
+
+				if (should_log) {
+					difflog << "  twobigger after mask:" << DBG_BITS("reg[28]", regfile[28]) << "\n";
+				}
+
 				if (regfile[27] == 0)
 				{
+					if (should_log) {
+						difflog << "  EARLY RETURN: onebigger == 0\n";
+						difflog << "  Returning (AllOnes, AllZeros)\n";
+						difflog.close();
+					}
 					return std::make_pair(WordConfiguration<Word>::AllOnes, WordConfiguration<Word>::AllZeros);
 				}
 			}
+
+			if (should_log) {
+				difflog << "\n--- After loop, final adjustment ---\n";
+			}
+
 			regfile[23] = 1;
 			regfile[23] = regfile[27] - regfile[23];
 			regfile[23] = ~regfile[23];
 			regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
-			
+
+			if (should_log) {
+				difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+			}
+
 			regfile[30] = 1;
 			regfile[24] = regfile[23] - regfile[30];
 			regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= leastSignificant - 1;
+
+			if (should_log) {
+				difflog << "  leftSmaller updated:" << DBG_BITS("reg[20]", regfile[20]) << "\n";
+			}
 
 			regfile[24] = ~regfile[28];
 			regfile[24] = regfile[24] & regfile[23];
 			regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificant);
 
+			if (should_log) {
+				difflog << "  onebigger final:" << DBG_BITS("reg[27]", regfile[27]) << "\n";
+			}
+
 			regfile[24] = ~regfile[23];
 			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
+
+			if (should_log) {
+				difflog << "  twobigger final:" << DBG_BITS("reg[28]", regfile[28]) << "\n";
+			}
 
 		}
 
 		else if (regfile[22] < 0)
 		{
+			if (should_log) {
+				difflog << "\n=== LEFT IS HIGHER BRANCH (scoreDiff < 0) ===\n";
+			}
+
 			//left is higher
 			for (int i = 1; i < -scoreDifference; i++)
 			{
+				if (should_log) {
+					difflog << "\n--- Loop iteration i=" << i << " ---\n";
+				}
+
 				regfile[23] = regfile[26] - 1;
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
+
+				if (should_log) {
+					difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+				}
 
 				regfile[24] = ~regfile[25];
 				regfile[24] = regfile[24] & regfile[23];
 				regfile[26] = regfile[26] ^ regfile[24]; // onesmaller ^= (~twosmaller & leastSignificant);
 
+				if (should_log) {
+					difflog << "  onesmaller after XOR:" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+				}
+
 				regfile[24] = ~regfile[23];
-				regfile[25] = regfile[25] & regfile[24]; // twosmaller &= ~leastSignificant;				
-				
+				regfile[25] = regfile[25] & regfile[24]; // twosmaller &= ~leastSignificant;
+
+				if (should_log) {
+					difflog << "  twosmaller after mask:" << DBG_BITS("reg[25]", regfile[25]) << "\n";
+				}
+
 				if (regfile[26] == 0)
 				{
+					if (should_log) {
+						difflog << "  EARLY RETURN: onesmaller == 0\n";
+						difflog << "  Returning (AllZeros, AllOnes)\n";
+						difflog.close();
+					}
 					return std::make_pair(WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllOnes);
 				}
 			}
+
+			if (should_log) {
+				difflog << "\n--- After loop, final adjustment ---\n";
+			}
+
 			regfile[23] = regfile[26] - 1;
 			regfile[23] = ~regfile[23];
 			regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
-			
+
+			if (should_log) {
+				difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+			}
+
 			regfile[24] = regfile[23] - 1;
 			regfile[21] = regfile[24] | regfile[21]; // rightSmaller |= leastSignificant - 1;
+
+			if (should_log) {
+				difflog << "  rightSmaller updated:" << DBG_BITS("reg[21]", regfile[21]) << "\n";
+			}
 
 			regfile[24] = ~regfile[25];
 			regfile[24] = regfile[24] & regfile[23];
 			regfile[26] = regfile[26] ^ regfile[24]; // onesmaller ^= (~twosmaller & leastSignificant);
 
+			if (should_log) {
+				difflog << "  onesmaller final:" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+			}
+
 			regfile[24] = ~regfile[23];
 			regfile[28] = regfile[28] & regfile[24]; // twobigger &= ~leastSignificant;
 
-/* 						// DEBUG
-			static int print_count_2 = 0;
-			if (print_count_2 < 5) {
-            std::cerr << "[differenceMasksBitTwiddle] Iteration " << print_count_2 + 1 << "\n";
-            std::cerr << "  rightSmaller: 0x" << std::hex << regfile[21] << " (" << std::dec << regfile[21] << ")\n";
-            std::cerr << "  leastSignificant: 0x" << std::hex << regfile[23] << " (" << std::dec << regfile[23] << ")\n";
-            std::cerr << "  onebigger: 0x" << std::hex << regfile[27] << " (" << std::dec << regfile[27] << ")\n";
-            std::cerr << "  twobigger: 0x" << std::hex << regfile[28] << " (" << std::dec << regfile[28] << ")\n";
-            std::cerr << "  onesmaller: 0x" << std::hex << regfile[26] << " (" << std::dec << regfile[26] << ")\n";
-            std::cerr << "  twosmaller: 0x" << std::hex << regfile[25] << " (" << std::dec << regfile[25] << ")\n";
-            print_count_2++;
-        	}
-			//END DEBUG */
+			if (should_log) {
+				difflog << "  twobigger final:" << DBG_BITS("reg[28]", regfile[28]) << "\n";
+			}
+
 		}
-		
+
+		if (should_log) {
+			difflog << "\n=== FINAL LOOP (WordSize iterations) ===\n";
+		}
+
 		for (int i = 0; i < WordConfiguration<Word>::WordSize; i++)
 		{
+			if (should_log) {
+				difflog << "\n--- Final loop iteration i=" << i << " ---\n";
+				difflog << "  Current state:"
+					<< DBG_BITS("reg[26]=onesmaller", regfile[26])
+					<< DBG_BITS("reg[27]=onebigger", regfile[27]) << "\n";
+			}
+
 			if (regfile[26] == 0)
 			{
-				if (regfile[27] == 0) break;
+				if (should_log) {
+					difflog << "  BRANCH: onesmaller == 0\n";
+				}
+
+				if (regfile[27] == 0) {
+					if (should_log) {
+						difflog << "  Both onesmaller and onebigger == 0, breaking\n";
+					}
+					break;
+				}
+
 				regfile[23] = 1;
 				regfile[23] = regfile[27] - regfile[23];
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[27]; // Word leastSignificant = onebigger & ~(onebigger - 1);
-				
+
+				if (should_log) {
+					difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+				}
+
 				// regfile[24] = regfile[23]; // removed the negation
 				regfile[21] = regfile[21] | regfile[23]; // rightSmaller |= -leastSignificant;
+
+				if (should_log) {
+					difflog << "  rightSmaller final:" << DBG_BITS("reg[21]", regfile[21]) << "\n";
+					difflog << "  Breaking from loop\n";
+				}
 				break;
 			}
 			if (regfile[27] == 0)
 			{
+				if (should_log) {
+					difflog << "  BRANCH: onebigger == 0\n";
+				}
+
 #ifdef EXTRACORRECTNESSASSERTIONS
 				assert(onesmaller != 0);
 #endif
@@ -1351,19 +1494,41 @@ private:
 				regfile[23] = ~regfile[23];
 				regfile[23] = regfile[23] & regfile[26]; // Word leastSignificant = onesmaller & ~(onesmaller - 1);
 
+				if (should_log) {
+					difflog << "  leastSignificant:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+				}
+
 				// regfile[24] = regfile[23]; // Removed the negation
 				regfile[20] = regfile[20] | regfile[23]; // leftSmaller |= -leastSignificant;
+
+				if (should_log) {
+					difflog << "  leftSmaller final:" << DBG_BITS("reg[20]", regfile[20]) << "\n";
+					difflog << "  Breaking from loop\n";
+				}
 				break;
 			}
+
+			if (should_log) {
+				difflog << "  BRANCH: Both onesmaller and onebigger non-zero\n";
+			}
+
 			regfile[23] = 1;
 			regfile[29] = regfile[27] - regfile[23];
 			regfile[29] = ~regfile[29];
 			regfile[29] = regfile[29] & regfile[27]; // Word leastSignificantBigger = onebigger & ~(onebigger - 1);
 
+			if (should_log) {
+				difflog << "  leastSignificantBigger:" << DBG_BITS("reg[29]", regfile[29]) << "\n";
+			}
+
 			regfile[23] = 1;
 			regfile[30] = regfile[26] - regfile[23];
 			regfile[30] = ~regfile[30];
 			regfile[30] = regfile[30] & regfile[26];// Word leastSignificantSmaller = onesmaller & ~(onesmaller - 1);
+
+			if (should_log) {
+				difflog << "  leastSignificantSmaller:" << DBG_BITS("reg[30]", regfile[30]) << "\n";
+			}
 
 #ifdef EXTRACORRECTNESSASSERTIONS
 			assert((onebigger & leastSignificantBigger) != 0);
@@ -1374,38 +1539,82 @@ private:
 #endif
 			if (regfile[29] > regfile[30])
 			{
+				if (should_log) {
+					difflog << "  leastSignificantBigger > leastSignificantSmaller\n";
+				}
+
 				regfile[24] = regfile[29] - regfile[30];
 				regfile[20] = regfile[20] | regfile[24]; // leftSmaller |= leastSignificantBigger - leastSignificantSmaller;
+
+				if (should_log) {
+					difflog << "  difference:" << DBG_BITS("reg[24]", regfile[24]) << "\n";
+					difflog << "  leftSmaller updated:" << DBG_BITS("reg[20]", regfile[20]) << "\n";
+				}
 			}
 			else
 			{
+				if (should_log) {
+					difflog << "  leastSignificantSmaller >= leastSignificantBigger\n";
+				}
+
 				regfile[24] = regfile[30] - regfile[29];
 				regfile[21] = regfile[21] | regfile[24]; // rightSmaller |= leastSignificantSmaller - leastSignificantBigger;
+
+				if (should_log) {
+					difflog << "  difference:" << DBG_BITS("reg[24]", regfile[24]) << "\n";
+					difflog << "  rightSmaller updated:" << DBG_BITS("reg[21]", regfile[21]) << "\n";
+				}
 			}
+
 			regfile[24] = ~regfile[28];
 			regfile[24] = regfile[29] & regfile[24];
 			regfile[27] = regfile[27] ^ regfile[24]; // onebigger ^= (~twobigger & leastSignificantBigger);
 
+			if (should_log) {
+				difflog << "  onebigger after update:" << DBG_BITS("reg[27]", regfile[27]) << "\n";
+			}
+
 			regfile[24] = ~regfile[29];
 			regfile[28] = regfile[28] & regfile[24]; //	twobigger &= ~leastSignificantBigger;
+
+			if (should_log) {
+				difflog << "  twobigger after update:" << DBG_BITS("reg[28]", regfile[28]) << "\n";
+			}
 
 			regfile[24] = ~regfile[25];
 			regfile[24] = regfile[24] & regfile[30];
 			regfile[26] = regfile[24] ^ regfile[26]; //	onesmaller ^= (~twosmaller & leastSignificantSmaller);
 
+			if (should_log) {
+				difflog << "  onesmaller after update:" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+			}
+
 			regfile[24] = ~regfile[30];
 			regfile[25] = regfile[25] & regfile[24]; //	twosmaller &= ~leastSignificantSmaller;
+
+			if (should_log) {
+				difflog << "  twosmaller after update:" << DBG_BITS("reg[25]", regfile[25]) << "\n";
+			}
 		}
 #ifdef EXTRACORRECTNESSASSERTIONS
 		assert((leftSmaller & rightSmaller) == 0);
 		assert(onesmaller == 0 || onebigger == 0);
 #endif
 
+		if (should_log) {
+			difflog << "\n=== FINAL RETURN ===\n";
+			difflog << "OUTPUTS:"
+				<< DBG_BITS("leftSmaller=reg[20]", regfile[20])
+				<< DBG_BITS("rightSmaller=reg[21]", regfile[21]) << "\n";
+			difflog << "========== END CALL #" << diffmasks_call_count << " ==========\n\n";
+			difflog.close();
+		}
+
 		return std::make_pair(regfile[20], regfile[21]);
 	} 
 	
 
-
+ 
 
 	static std::pair<uint64_t, uint64_t> differenceMasksWord(uint64_t leftVP, uint64_t leftVN, uint64_t rightVP, uint64_t rightVN, int scoreDifference)
 	{
