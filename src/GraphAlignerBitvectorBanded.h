@@ -408,8 +408,8 @@ private:
 			dbg << "calculateSlice call #" << calculateSliceIteration
 				<< " | j=" << j
 				<< " | calculableQueue.size()=" << calculableQueue.size()
-				<< " | sequence[0:64]=";
-			for (size_t idx = 0; idx < std::min<size_t>(64, sequence.size()); ++idx) {
+				<< " | sequence[0:" << WordConfiguration<Word>::WordSize << "]=";
+			for (size_t idx = 0; idx < std::min<size_t>(WordConfiguration<Word>::WordSize, sequence.size()); ++idx) {
 				dbg << sequence[idx];
 			}
 			dbg << std::endl;
@@ -504,7 +504,7 @@ private:
 		EqVector EqV = BV::getEqVector(sequence, j);
 
 		assert(previousSlice.size() > 0 || seedhitStart != std::numeric_limits<size_t>::max());
-		ScoreType zeroScore = previousMinScore*priorityMismatchPenalty - j - 64;
+		ScoreType zeroScore = previousMinScore*priorityMismatchPenalty - j - WordConfiguration<Word>::WordSize;
 		if (j == 0)
 		{
 			for (auto node : previousSlice)
@@ -1041,13 +1041,13 @@ private:
 			size_t forbidslice = 0;
 			if (std::get<1>(t) >= 1)
 			{
-				forbidslice = (std::get<1>(t) + 63) / 64;
+				forbidslice = (std::get<1>(t) + WordConfiguration<Word>::WordSize - 1) / WordConfiguration<Word>::WordSize;
 				if (forbidslice >= numSlices) forbidslice = numSlices-1;
 			}
 			size_t allowslice = 0;
 			if (std::get<2>(t) >= 1)
 			{
-				allowslice = std::get<2>(t) / 64;
+				allowslice = std::get<2>(t) / WordConfiguration<Word>::WordSize;
 				if (allowslice >= numSlices) allowslice = numSlices-1;
 			}
 			if (forbidslice == allowslice) continue;

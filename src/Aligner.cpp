@@ -404,7 +404,7 @@ std::string hpcCollapse(const std::string& read)
 	return result;
 }
 
-void setForbiddenNodes(GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGraphsizedState& reusableState, const DiploidHeuristicSplitter& diploidHeuristic, const std::string& sequence)
+void setForbiddenNodes(GraphAlignerCommon<size_t, int64_t, uint32_t>::AlignerGraphsizedState& reusableState, const DiploidHeuristicSplitter& diploidHeuristic, const std::string& sequence)
 {
 	for (std::tuple<size_t, int, int> t : diploidHeuristic.getForbiddenNodes(sequence))
 	{
@@ -412,20 +412,20 @@ void setForbiddenNodes(GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGra
 	}
 }
 
-void unsetForbiddenNodes(GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGraphsizedState& reusableState, const DiploidHeuristicSplitter& diploidHeuristic, const std::string& sequence)
+void unsetForbiddenNodes(GraphAlignerCommon<size_t, int64_t, uint32_t>::AlignerGraphsizedState& reusableState, const DiploidHeuristicSplitter& diploidHeuristic, const std::string& sequence)
 {
 	reusableState.bigraphNodeForbiddenSpans.clear();
 }
 
-void filterOutWrongHaplotypeSeeds(std::vector<SeedHit>& seeds, const GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGraphsizedState& reusableState)
+void filterOutWrongHaplotypeSeeds(std::vector<SeedHit>& seeds, const GraphAlignerCommon<size_t, int64_t, uint32_t>::AlignerGraphsizedState& reusableState)
 {
 	phmap::flat_hash_map<size_t, std::vector<std::pair<int, int>>> forbiddenSpans;
 	for (auto t : reusableState.bigraphNodeForbiddenSpans)
 	{
 		size_t roundedStart = 0;
 		size_t roundedEnd = 0;
-		if (std::get<1>(t) > 0) roundedStart = (std::get<1>(t) / 64) * 64;
-		if (std::get<2>(t) > 0) roundedEnd = ((std::get<2>(t) + 63) / 64) * 64;
+		if (std::get<1>(t) > 0) roundedStart = (std::get<1>(t) / 32) * 32;
+		if (std::get<2>(t) > 0) roundedEnd = ((std::get<2>(t) + 31) / 32) * 32;
 		forbiddenSpans[std::get<0>(t)].emplace_back(roundedStart, roundedEnd);
 	}
 	for (size_t i = seeds.size()-1; i < seeds.size(); i--)
@@ -459,7 +459,7 @@ void runComponentMappings(const AlignmentGraph& alignmentGraph, const DiploidHeu
 	moodycamel::ProducerToken correctedToken { correctedOut };
 	moodycamel::ProducerToken clippedToken { correctedClippedOut };
 	assertSetNoRead("Before any read");
-	GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGraphsizedState reusableState { alignmentGraph, params.alignmentBandwidth };
+	GraphAlignerCommon<size_t, int64_t, uint32_t>::AlignerGraphsizedState reusableState { alignmentGraph, params.alignmentBandwidth };
 	AlignmentSelection::SelectionOptions selectionOptions;
 	selectionOptions.graphSize = alignmentGraph.SizeInBP();
 	selectionOptions.ECutoff = params.selectionECutoff;
@@ -564,7 +564,7 @@ void runComponentMappings(const AlignmentGraph& alignmentGraph, const DiploidHeu
         //includes seeding
 				auto alntimeStart = std::chrono::system_clock::now();
 				std::string paddedSequence = fastq->sequence;
-				while (paddedSequence.size() % 64 != 0)
+				while (paddedSequence.size() % 32 != 0)
 				{
 					paddedSequence += '-';
 				}

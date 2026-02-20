@@ -4,11 +4,21 @@
 #include "DebugFlags.h"
 #include <bitset>
 
-// Helper macro: prints 64-bit binary(decimal) + hi/lo 32-bit split
-#define DBG_BITS(name, val) \
+// Helper macro: prints binary(decimal) representation
+// For 32-bit: prints as 32-bit value with hi/lo 16-bit split
+// For 64-bit: prints as 64-bit value with hi/lo 32-bit split
+#define DBG_BITS_32(name, val) \
+	"\n  " name "=" << std::bitset<32>(val) << "(" << (val) << ")" \
+	<< "\n    [hi]=" << std::bitset<16>((uint32_t)(val) >> 16) << "(" << ((uint32_t)(val) >> 16) << ")" \
+	<< " [lo]=" << std::bitset<16>((uint32_t)(val) & 0xFFFF) << "(" << ((uint32_t)(val) & 0xFFFF) << ")"
+
+#define DBG_BITS_64(name, val) \
 	"\n  " name "=" << std::bitset<64>(val) << "(" << (val) << ")" \
 	<< "\n    [hi]=" << std::bitset<32>((uint64_t)(val) >> 32) << "(" << ((uint64_t)(val) >> 32) << ")" \
 	<< " [lo]=" << std::bitset<32>((uint64_t)(val) & 0xFFFFFFFF) << "(" << ((uint64_t)(val) & 0xFFFFFFFF) << ")"
+
+// Default to 32-bit for current configuration
+#define DBG_BITS(name, val) DBG_BITS_32(name, val)
 
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorCommon;
@@ -146,6 +156,141 @@ public:
 		x = (x | (x << S[0])) & B[0];
 
 		y = (y | (y << S[4])) & B[4];
+		y = (y | (y << S[3])) & B[3];
+		y = (y | (y << S[2])) & B[2];
+		y = (y | (y << S[1])) & B[1];
+		y = (y | (y << S[0])) & B[0];
+
+		return x | (y << 1);
+	}
+};
+
+template <>
+class WordConfiguration<uint32_t>
+{
+public:
+	static constexpr int WordSize = 32;
+	//number of bits per chunk
+	//prefix sum differences are calculated in chunks of log w bits
+	static constexpr int ChunkBits = 8;
+	static constexpr uint32_t AllZeros = 0x00000000;
+	static constexpr uint32_t AllOnes = 0xFFFFFFFF;
+	static constexpr uint32_t LastBit = 0x80000000;
+	//positions of the sign bits for each chunk
+	static constexpr uint32_t SignMask = 0x80808080;
+	//constant for multiplying the chunk popcounts into prefix sums
+	//this should be 1 at the start of each chunk
+	static constexpr uint32_t PrefixSumMultiplierConstant = 0x01010101;
+	//positions of the least significant bits for each chunk
+	static constexpr uint32_t LSBMask = 0x01010101;
+
+#ifdef NOBUILTINPOPCOUNT
+	static int popcount(uint32_t x)
+	{
+		//https://en.wikipedia.org/wiki/Hamming_weight
+		x -= (x >> 1) & 0x55555555;
+		x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+		x = (x + (x >> 4)) & 0x0f0f0f0f;
+		return (x * 0x01010101) >> 24;
+	}
+#else
+	static int popcount(uint32_t x)
+	{
+		//https://gcc.gnu.org/onlinedocs/gcc-4.8.4/gcc/X86-Built-in-Functions.html
+		// return __builtin_popcount(x);
+		//for some reason __builtin_popcount takes 21 instructions so call assembly directly
+		__asm__("popcnt %0, %0" : "+r" (x));
+		return x;
+	}
+#endif
+
+
+	static uint32_t ChunkPopcounts(uint32_t value)
+	{
+		uint32_t x = value;
+		x -= (x >> 1) & 0x55555555;
+		x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+		x = (x + (x >> 4)) & 0x0f0f0f0f;
+		return x;
+	}
+
+	static int BitPosition(uint32_t low, uint32_t high, int rank)
+	{
+		assert(rank >= 0);
+		if (popcount(low) <= rank)
+		{
+			rank -= popcount(low);
+			return 32 + BitPosition(high, rank);
+		}
+		return BitPosition(low, rank);
+	}
+
+	static int BitPosition(uint32_t number, int rank)
+	{
+		// // https://stackoverflow.com/questions/45482787/how-to-efficiently-find-the-n-th-set-bit
+		// uint32_t j = _pdep_u32(1 << rank, number);
+		// return (__builtin_ctz(j));
+		uint32_t bytes = ChunkPopcounts(number);
+		//cumulative popcount of each byte
+		uint32_t cumulative = bytes * PrefixSumMultiplierConstant;
+		//spread the rank into each byte
+		uint32_t rankFinder = ((rank + 1) & 0xFF) * PrefixSumMultiplierConstant;
+		//rankMask's msb will be 0 if the c. popcount at that byte is < rank, or 1 if >= rank
+		uint32_t rankMask = (cumulative | SignMask) - rankFinder;
+		//the total number of ones in rankMask is the number of bytes whose c. popcount is >= rank
+		//4 - that is the number of bytes whose c. popcount is < rank
+		int smallerBytes = 4 - ((((rankMask & SignMask) >> 7) * PrefixSumMultiplierConstant) >> 24);
+		assert(smallerBytes < 4);
+		//the bit position will be inside this byte
+		uint32_t interestingByte = (number >> (smallerBytes * 8)) & 0xFF;
+		if (smallerBytes > 0) rank -= (cumulative >> ((smallerBytes - 1) * 8)) & 0xFF;
+		assert(rank >= 0 && rank < 8);
+		//spread the 1's from interesting byte to each byte
+		//first put every pair of bits into each 2-byte boundary
+		//then select only those pairs
+		//then spread the pairs into each byte boundary
+		//and select the ones
+		uint32_t spreadBits = (((interestingByte * 0x00004001) & 0x00030003) * 0x00000081) & 0x01010101;
+/*
+0000 0000  0000 0000  0000 0000  abcd efgh
+0000 00ab  cdef gh00  0000 abcd  efgh 0000  * 0x00004001
+0000 00ab  0000 0000  0000 00cd  0000 0000  & 0x00030003
+000a b000  00ab 0000  000c d000  00cd 0000  * 0x00000081
+000a 0000  000b 0000  000c 0000  000d 0000  & 0x01010101
+*/
+		//find the position from the bits the same way as from the bytes
+		uint32_t cumulativeBits = spreadBits * PrefixSumMultiplierConstant;
+		uint32_t bitRankFinder = ((rank + 1) & 0xFF) * PrefixSumMultiplierConstant;
+		uint32_t bitRankMask = (cumulativeBits | SignMask) - bitRankFinder;
+		int smallerBits = 4 - ((((bitRankMask & SignMask) >> 7) * PrefixSumMultiplierConstant) >> 24);
+		assert(smallerBits >= 0);
+		assert(smallerBits < 8);
+		return smallerBytes * 8 + smallerBits;
+	}
+
+	static uint32_t MortonHigh(uint32_t left, uint32_t right)
+	{
+		return Interleave(left >> 16, right >> 16);
+	}
+
+	static uint32_t MortonLow(uint32_t left, uint32_t right)
+	{
+		return Interleave(left & 0xFFFF, right & 0xFFFF);
+	}
+
+	//http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
+	static uint32_t Interleave(uint32_t x, uint32_t y)
+	{
+		assert(x == (x & 0xFFFF));
+		assert(y == (y & 0xFFFF));
+		static const uint32_t B[] = {0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
+		static const uint32_t S[] = {1, 2, 4, 8};
+
+		x = (x | (x << S[3])) & B[3];
+		x = (x | (x << S[2])) & B[2];
+		x = (x | (x << S[1])) & B[1];
+		x = (x | (x << S[0])) & B[0];
+
 		y = (y | (y << S[3])) & B[3];
 		y = (y | (y << S[2])) & B[2];
 		y = (y | (y << S[1])) & B[1];
@@ -538,7 +683,7 @@ private:
 		return result;
 	}
 
-	static uint64_t bytePrefixSums(uint64_t value, int addition)
+	static Word bytePrefixSums(Word value, int addition)
 	{
 		value <<= WordConfiguration<Word>::ChunkBits;
 		assert(addition >= 0);
@@ -546,15 +691,15 @@ private:
 		return value * WordConfiguration<Word>::PrefixSumMultiplierConstant;
 	}
 
-	static uint64_t bytePrefixSums(uint64_t value)
+	static Word bytePrefixSums(Word value)
 	{
 		value <<= WordConfiguration<Word>::ChunkBits;
 		return value * WordConfiguration<Word>::PrefixSumMultiplierConstant;
 	}
 
-	static uint64_t byteVPVNSum(uint64_t prefixSumVP, uint64_t prefixSumVN)
+	static Word byteVPVNSum(Word prefixSumVP, Word prefixSumVN)
 	{
-		uint64_t result = WordConfiguration<Word>::SignMask;
+		Word result = WordConfiguration<Word>::SignMask;
 		assert((prefixSumVP & result) == 0);
 		assert((prefixSumVN & result) == 0);
 		result += prefixSumVP;
@@ -580,7 +725,7 @@ private:
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right)
 	{
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
-		static_assert(std::is_same<Word, uint64_t>::value);
+		static_assert(std::is_same<Word, uint64_t>::value || std::is_same<Word, uint32_t>::value, "Word must be either uint64_t or uint32_t");
 
 		regfile[12] = left.VN;
 		regfile[13] = left.VP;
@@ -1106,7 +1251,7 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 		// Diffmasks logging - only first 5 calls
-		static int diffmasks_call_count = 0;
+		static int diffmasks_call_count = 10;
 		diffmasks_call_count++;
 		bool should_log = (diffmasks_call_count <= 5);
 		std::ofstream difflog;
@@ -1616,16 +1761,16 @@ private:
 
  
 
-	static std::pair<uint64_t, uint64_t> differenceMasksWord(uint64_t leftVP, uint64_t leftVN, uint64_t rightVP, uint64_t rightVN, int scoreDifference)
+	static std::pair<Word, Word> differenceMasksWord(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 		assert(scoreDifference >= 0);
-		const uint64_t signmask = WordConfiguration<Word>::SignMask;
-		const uint64_t lsbmask = WordConfiguration<Word>::LSBMask;
+		const Word signmask = WordConfiguration<Word>::SignMask;
+		const Word lsbmask = WordConfiguration<Word>::LSBMask;
 		const int chunksize = WordConfiguration<Word>::ChunkBits;
-		const uint64_t allones = WordConfiguration<Word>::AllOnes;
-		const uint64_t allzeros = WordConfiguration<Word>::AllZeros;
-		uint64_t VPcommon = ~(leftVP & rightVP);
-		uint64_t VNcommon = ~(leftVN & rightVN);
+		const Word allones = WordConfiguration<Word>::AllOnes;
+		const Word allzeros = WordConfiguration<Word>::AllZeros;
+		Word VPcommon = ~(leftVP & rightVP);
+		Word VNcommon = ~(leftVN & rightVN);
 		leftVP &= VPcommon;
 		leftVN &= VNcommon;
 		rightVP &= VPcommon;
@@ -1635,7 +1780,7 @@ private:
 		{
 			return std::make_pair(allones, allzeros);
 		}
-		if (scoreDifference == 128 && rightVN == allones && leftVP == allones)
+		if (scoreDifference == WordConfiguration<Word>::WordSize * 2 && rightVN == allones && leftVP == allones)
 		{
 			return std::make_pair(allones ^ ((Word)1 << (WordConfiguration<Word>::WordSize-1)), allzeros);
 		}
@@ -1644,21 +1789,21 @@ private:
 			return std::make_pair(0, allones);
 		}
 		assert(scoreDifference >= 0);
-		assert(scoreDifference < 128);
-		uint64_t byteVPVNSumLeft = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVP), 0), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVN), 0));
-		uint64_t byteVPVNSumRight = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVP), scoreDifference), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVN), 0));
-		uint64_t difference = byteVPVNSumLeft;
+		assert(scoreDifference < WordConfiguration<Word>::WordSize * 2);
+		Word byteVPVNSumLeft = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVP), 0), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVN), 0));
+		Word byteVPVNSumRight = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVP), scoreDifference), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVN), 0));
+		Word difference = byteVPVNSumLeft;
 		{
 			//take the bytvpvnsumright and split it from positive/negative values into two vectors with positive values, one which needs to be added and the other deducted
 			//smearmask is 1 where the number needs to be deducted, and 0 where it needs to be added
 			//except sign bits which are all 0
-			uint64_t smearmask = ((byteVPVNSumRight & signmask) >> (chunksize-1)) * ((((Word)1) << (chunksize-1))-1);
+			Word smearmask = ((byteVPVNSumRight & signmask) >> (chunksize-1)) * ((((Word)1) << (chunksize-1))-1);
 			assert((smearmask & signmask) == 0);
-			uint64_t deductions = ~smearmask & byteVPVNSumRight & ~signmask;
+			Word deductions = ~smearmask & byteVPVNSumRight & ~signmask;
 			//byteVPVNSumRight is in one's complement so take the not-value + 1
-			uint64_t additions = (smearmask & ~byteVPVNSumRight) + (smearmask & lsbmask);
+			Word additions = (smearmask & ~byteVPVNSumRight) + (smearmask & lsbmask);
 			assert((deductions & signmask) == 0);
-			uint64_t signsBefore = difference & signmask;
+			Word signsBefore = difference & signmask;
 			//unset the sign bits so additions don't interfere with other chunks
 			difference &= ~signmask;
 			difference += additions;
@@ -1676,11 +1821,11 @@ private:
 			difference |= signsBefore;
 		}
 		//difference now contains the prefix sum difference (left-right) at each chunk
-		uint64_t resultLeftSmallerThanRight = 0;
-		uint64_t resultRightSmallerThanLeft = 0;
+		Word resultLeftSmallerThanRight = 0;
+		Word resultRightSmallerThanLeft = 0;
 		for (int bit = 0; bit < chunksize; bit++)
 		{
-			uint64_t signsBefore = difference & signmask;
+			Word signsBefore = difference & signmask;
 			//unset the sign bits so additions don't interfere with other chunks
 			difference &= ~signmask;
 			difference += leftVP & lsbmask;
@@ -1704,10 +1849,10 @@ private:
 			rightVP >>= 1;
 			//difference now contains the prefix sums difference (left-right) at each byte at (bit)'th bit
 			//left < right when the prefix sum difference is negative (sign bit is set)
-			uint64_t negative = (difference & signmask);
+			Word negative = (difference & signmask);
 			resultLeftSmallerThanRight |= negative >> (WordConfiguration<Word>::ChunkBits - 1 - bit);
 			//Test equality to zero. If it's zero, substracting one will make the sign bit 0, otherwise 1
-			uint64_t notEqualToZero = ((difference | signmask) - lsbmask) & signmask;
+			Word notEqualToZero = ((difference | signmask) - lsbmask) & signmask;
 			//right > left when the prefix sum difference is positive (not zero and not negative)
 			resultRightSmallerThanLeft |= (notEqualToZero & ~negative) >> (WordConfiguration<Word>::ChunkBits - 1 - bit);
 		}
