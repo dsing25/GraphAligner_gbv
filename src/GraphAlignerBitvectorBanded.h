@@ -401,43 +401,17 @@ private:
 		// calc_out.close();
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableCalculateSliceDebug) {
-			calculateSliceIteration++;
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "calculateSlice call #" << calculateSliceIteration
-				<< " | j=" << j
-				<< " | calculableQueue.size()=" << calculableQueue.size()
-				<< " | sequence[0:" << WordConfiguration<Word>::WordSize << "]=";
-			for (size_t idx = 0; idx < std::min<size_t>(WordConfiguration<Word>::WordSize, sequence.size()); ++idx) {
-				dbg << sequence[idx];
-			}
-			dbg << std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("calculateSlice",
+		          enableCalculateSliceDebug,
+		          calculateSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | j=" << j
+			              << " | calculableQueue.size()=" << calculableQueue.size()
+			              << " | sequence[0:" << WordConfiguration<Word>::WordSize << "]=";
+			          for (size_t idx = 0; idx < std::min<size_t>(WordConfiguration<Word>::WordSize, sequence.size()); ++idx) {
+				          dbg << sequence[idx];
+			          }
+		          });
 		// --- End debug logging block ---
 
 		
@@ -594,37 +568,13 @@ private:
 		{
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableCalculateSliceDebug) {
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "calculateSlice Queue Start call #" << calculateSliceIteration
-			<< " | calculableQueue.size()=" << calculableQueue.size()
-			<< std::endl;
-			dbg.close();
-			}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("calculateSlice Queue Start",
+		          enableCalculateSliceDebug,
+		          calculateSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | calculableQueue.size()=" << calculableQueue.size();
+		          },
+		          false);  // Don't increment - supplementary log for calculateSlice
 		// --- End debug logging block ---
 
 			auto pair = calculableQueue.top();
@@ -768,37 +718,13 @@ private:
 			if (result.cellsProcessed > params.maxCellsPerSlice) break;
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableCalculateSliceDebug) {
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "calculateSlice Queue End call #" << calculateSliceIteration
-			<< " | calculableQueue.size()=" << calculableQueue.size()
-			<< std::endl;
-			dbg.close();
-			}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("calculateSlice Queue End",
+		          enableCalculateSliceDebug,
+		          calculateSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | calculableQueue.size()=" << calculableQueue.size();
+		          },
+		          false);  // Don't increment - end log for calculateSlice
 		// --- End debug logging block ---
 
 		} //end while

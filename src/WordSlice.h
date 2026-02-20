@@ -5,12 +5,10 @@
 #include <bitset>
 
 // Helper macro: prints binary(decimal) representation
-// For 32-bit: prints as 32-bit value with hi/lo 16-bit split
+// For 32-bit: prints as 32-bit value
 // For 64-bit: prints as 64-bit value with hi/lo 32-bit split
 #define DBG_BITS_32(name, val) \
-	"\n  " name "=" << std::bitset<32>(val) << "(" << (val) << ")" \
-	<< "\n    [hi]=" << std::bitset<16>((uint32_t)(val) >> 16) << "(" << ((uint32_t)(val) >> 16) << ")" \
-	<< " [lo]=" << std::bitset<16>((uint32_t)(val) & 0xFFFF) << "(" << ((uint32_t)(val) & 0xFFFF) << ")"
+	"\n  " name "=" << std::bitset<32>(val) << "(" << (val) << ")"
 
 #define DBG_BITS_64(name, val) \
 	"\n  " name "=" << std::bitset<64>(val) << "(" << (val) << ")" \
@@ -418,41 +416,15 @@ public:
 
 		
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableGetScoreBeforeStartDebug) {
-			getScoreBeforeStartIteration++;
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "getScoreBeforeStart call #" << getScoreBeforeStartIteration
-				<< DBG_BITS("VP", VP)
-				<< DBG_BITS("VN", VN)
-				<< DBG_BITS("regfile[25]", regfile[25])
-				<< "\n  scoreEnd=" << scoreEnd
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("getScoreBeforeStart",
+		          enableGetScoreBeforeStartDebug,
+		          getScoreBeforeStartIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("VP", VP)
+			              << DBG_BITS("VN", VN)
+			              << DBG_BITS("regfile[25]", regfile[25])
+			              << "\n  scoreEnd=" << scoreEnd;
+		          });
 		// --- End debug logging block ---
 
 		return regfile[25];
@@ -738,45 +710,19 @@ private:
 
 		
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableMergeTwoSlices2InputDebug) {
-			mergeTwoSlices2InputIteration++;
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "mergeTwoSlices2Input call #" << mergeTwoSlices2InputIteration
-				<< DBG_BITS("left.VP", left.VP)
-				<< DBG_BITS("left.VN", left.VN)
-				<< DBG_BITS("regfile[14]", regfile[14])
-				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< DBG_BITS("right.VP", right.VP)
-				<< DBG_BITS("right.VN", right.VN)
-				<< DBG_BITS("regfile[18]", regfile[18])
-				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("mergeTwoSlices2Input",
+		          enableMergeTwoSlices2InputDebug,
+		          mergeTwoSlices2InputIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("left.VP", left.VP)
+			              << DBG_BITS("left.VN", left.VN)
+			              << DBG_BITS("regfile[14]", regfile[14])
+			              << "\n  left.scoreEnd=" << left.scoreEnd
+			              << DBG_BITS("right.VP", right.VP)
+			              << DBG_BITS("right.VN", right.VN)
+			              << DBG_BITS("regfile[18]", regfile[18])
+			              << "\n  right.scoreEnd=" << right.scoreEnd;
+		          });
 		// --- End debug logging block ---
 
 		if (regfile[14] > regfile[18]) // std::swap(left, right);
@@ -808,45 +754,21 @@ private:
 		right.scoreEnd = regfile[19];
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableMergeTwoSlices2InputDebug) {
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "mergeTwoSlices2Input - Post Op call #" << mergeTwoSlices2InputIteration
-				<< DBG_BITS("left.VP", left.VP)
-				<< DBG_BITS("left.VN", left.VN)
-				<< DBG_BITS("regfile[14]", regfile[14])
-				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< DBG_BITS("right.VP", right.VP)
-				<< DBG_BITS("right.VN", right.VN)
-				<< DBG_BITS("regfile[18]", regfile[18])
-				<< DBG_BITS("regfile[31]", regfile[31])
-				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("mergeTwoSlices2Input - Post Op",
+		          enableMergeTwoSlices2InputDebug,
+		          mergeTwoSlices2InputIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("left.VP", left.VP)
+			              << DBG_BITS("left.VN", left.VN)
+			              << DBG_BITS("regfile[14]", regfile[14])
+			              << "\n  left.scoreEnd=" << left.scoreEnd
+			              << DBG_BITS("right.VP", right.VP)
+			              << DBG_BITS("right.VN", right.VN)
+			              << DBG_BITS("regfile[18]", regfile[18])
+			              << DBG_BITS("regfile[31]", regfile[31])
+			              << "\n  right.scoreEnd=" << right.scoreEnd;
+		          },
+		          false);  // Don't increment - use same iteration number as initial call
 		// --- End debug logging block ---
 
 		auto masks = differenceMasks(regfile[13], regfile[12], regfile[17], regfile[16], regfile[31]);
@@ -891,45 +813,19 @@ private:
 	{
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableMergeTwoSlices4InputDebug) {
-			mergeTwoSlices4InputIteration++;
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "mergeTwoSlices4Input call #" << mergeTwoSlices4InputIteration
-				<< DBG_BITS("left.VP", left.VP)
-				<< DBG_BITS("left.VN", left.VN)
-				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< DBG_BITS("right.VP", right.VP)
-				<< DBG_BITS("right.VN", right.VN)
-				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< DBG_BITS("leftSmaller", leftSmaller)
-				<< DBG_BITS("rightSmaller", rightSmaller)
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("mergeTwoSlices4Input",
+		          enableMergeTwoSlices4InputDebug,
+		          mergeTwoSlices4InputIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("left.VP", left.VP)
+			              << DBG_BITS("left.VN", left.VN)
+			              << "\n  left.scoreEnd=" << left.scoreEnd
+			              << DBG_BITS("right.VP", right.VP)
+			              << DBG_BITS("right.VN", right.VN)
+			              << "\n  right.scoreEnd=" << right.scoreEnd
+			              << DBG_BITS("leftSmaller", leftSmaller)
+			              << DBG_BITS("rightSmaller", rightSmaller);
+		          });
 		// --- End debug logging block ---
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
@@ -1023,47 +919,23 @@ private:
 		right.VN = regfile[16];
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableMergeTwoSlices4InputDebug) {
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "mergeTwoSlices4Input - Post Op call #" << mergeTwoSlices4InputIteration
-				<< DBG_BITS("left.VP", left.VP)
-				<< DBG_BITS("left.VN", left.VN)
-				<< "\n  left.scoreEnd=" << left.scoreEnd
-				<< DBG_BITS("right.VP", right.VP)
-				<< DBG_BITS("right.VN", right.VN)
-				<< "\n  right.scoreEnd=" << right.scoreEnd
-				<< DBG_BITS("leftSmaller", leftSmaller)
-				<< DBG_BITS("rightSmaller", rightSmaller)
-				<< DBG_BITS("result.VP", result.VP)
-				<< DBG_BITS("result.VN", result.VN)
-				<< "\n  result.scoreEnd=" << result.scoreEnd
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("mergeTwoSlices4Input - Post Op",
+		          enableMergeTwoSlices4InputDebug,
+		          mergeTwoSlices4InputIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("left.VP", left.VP)
+			              << DBG_BITS("left.VN", left.VN)
+			              << "\n  left.scoreEnd=" << left.scoreEnd
+			              << DBG_BITS("right.VP", right.VP)
+			              << DBG_BITS("right.VN", right.VN)
+			              << "\n  right.scoreEnd=" << right.scoreEnd
+			              << DBG_BITS("leftSmaller", leftSmaller)
+			              << DBG_BITS("rightSmaller", rightSmaller)
+			              << DBG_BITS("result.VP", result.VP)
+			              << DBG_BITS("result.VN", result.VN)
+			              << "\n  result.scoreEnd=" << result.scoreEnd;
+		          },
+		          false);  // Don't increment - use same iteration number as initial call
 		// --- End debug logging block ---
 
 
@@ -1251,9 +1123,9 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 		// Diffmasks logging - only first 5 calls
-		static int diffmasks_call_count = 10;
+		static int diffmasks_call_count = 15;
 		diffmasks_call_count++;
-		bool should_log = (diffmasks_call_count <= 5);
+		bool should_log = (diffmasks_call_count <= 8);
 		std::ofstream difflog;
 		if (should_log) {
 			difflog.open("diffmasks.log", std::ios::app);
@@ -1267,42 +1139,16 @@ private:
 		}
 
 		// --- Debug logging block ---
-		if (debugTop == true) {
-		if (enableDifferenceMasksBitTwiddleDebug) {
-			differenceMasksBitTwiddleIteration++;
-			std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-			dbg << "differenceMasks call #" << differenceMasksBitTwiddleIteration
-				<< DBG_BITS("leftVP", leftVP)
-				<< DBG_BITS("leftVN", leftVN)
-				<< DBG_BITS("rightVP", rightVP)
-				<< DBG_BITS("rightVN", rightVN)
-				<< "\n  scoreDifference=" << scoreDifference
-				<< std::endl;
-			dbg.close();
-		}
-
-		if (
-			calculateSliceIteration >= 3 &&
-			getNextSliceIteration >= 3 &&
-			calculateNodeClipPreciseIteration >= 3 &&
-			calculateNodeInnerIteration >= 3 &&
-			getScoreBeforeStartIteration >= 3 &&
-			mergeTwoSlices2InputIteration >= 3 &&
-			mergeTwoSlices4InputIteration >= 3 &&
-			differenceMasksBitTwiddleIteration >= 3 &&
-			flattenWordSliceIteration >= 3
-		) {
-			enableCalculateSliceDebug = false;
-			enableGetNextSliceDebug = false;
-			enableCalculateNodeClipPreciseDebug = false;
-			enableCalculateNodeInnerDebug = false;
-			enableGetScoreBeforeStartDebug = false;
-			enableMergeTwoSlices2InputDebug = false;
-			enableMergeTwoSlices4InputDebug = false;
-			enableDifferenceMasksBitTwiddleDebug = false;
-			enableFlattenWordSliceDebug = false;
-		}
-	}
+		DEBUG_LOG("differenceMasks",
+		          enableDifferenceMasksBitTwiddleDebug,
+		          differenceMasksBitTwiddleIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << DBG_BITS("leftVP", leftVP)
+			              << DBG_BITS("leftVN", leftVN)
+			              << DBG_BITS("rightVP", rightVP)
+			              << DBG_BITS("rightVN", rightVN)
+			              << "\n  scoreDifference=" << scoreDifference;
+		          });
 		// --- End debug logging block ---
 
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;

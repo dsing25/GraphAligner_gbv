@@ -1,5 +1,7 @@
 #pragma once
 #include <cstdint>
+#include <functional>
+#include <string>
 
 extern bool enableCalculateSliceDebug;
 extern uint64_t calculateSliceIteration;
@@ -32,3 +34,16 @@ extern uint64_t EqVectorIteration;
 
 
 extern bool debugTop;
+
+// Helper function for debug logging
+// Usage: DEBUG_LOG("functionName", enableFlag, iterationCounter,
+//                  [&](std::ostream& dbg) { dbg << "custom output"; });
+// Set increment=false for "Post Op" or follow-up logs that should use the same iteration number
+void DEBUG_LOG(const std::string& functionName,
+               bool& enableFlag,
+               uint64_t& iterationCounter,
+               std::function<void(std::ostream&)> outputFunc,
+               bool increment = true);
+
+// Check if all debug iterations have reached the threshold and disable all flags
+void checkAndDisableAllDebugFlags();

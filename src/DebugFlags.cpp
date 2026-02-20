@@ -1,4 +1,6 @@
 #include "DebugFlags.h"
+#include <fstream>
+#include <sstream>
 
 bool enableCalculateSliceDebug = true;
 uint64_t calculateSliceIteration = 0;
@@ -30,4 +32,53 @@ uint64_t flattenWordSliceIteration = 0;
 uint64_t EqVectorIteration = 0;
 
 
-bool debugTop = false;
+bool debugTop = true;
+
+// Helper function for debug logging
+void DEBUG_LOG(const std::string& functionName,
+               bool& enableFlag,
+               uint64_t& iterationCounter,
+               std::function<void(std::ostream&)> outputFunc,
+               bool increment) {
+	if (!debugTop || !enableFlag) {
+		return;
+	}
+
+	if (increment) {
+		iterationCounter++;
+	}
+	std::ofstream dbg("32bitGBV.log", std::ios::app);
+	dbg << functionName << " call #" << iterationCounter;
+	outputFunc(dbg);
+	dbg << std::endl;
+	dbg.close();
+
+	// Check if we should disable all debug flags
+	checkAndDisableAllDebugFlags();
+}
+
+// Check if all debug iterations have reached the threshold (3) and disable all flags
+void checkAndDisableAllDebugFlags() {
+	const uint64_t THRESHOLD = 3;
+
+	if (calculateSliceIteration >= THRESHOLD &&
+	    getNextSliceIteration >= THRESHOLD &&
+	    calculateNodeClipPreciseIteration >= THRESHOLD &&
+	    calculateNodeInnerIteration >= THRESHOLD &&
+	    getScoreBeforeStartIteration >= THRESHOLD &&
+	    mergeTwoSlices2InputIteration >= THRESHOLD &&
+	    mergeTwoSlices4InputIteration >= THRESHOLD &&
+	    differenceMasksBitTwiddleIteration >= THRESHOLD &&
+	    flattenWordSliceIteration >= THRESHOLD) {
+
+		enableCalculateSliceDebug = false;
+		enableGetNextSliceDebug = false;
+		enableCalculateNodeClipPreciseDebug = false;
+		enableCalculateNodeInnerDebug = false;
+		enableGetScoreBeforeStartDebug = false;
+		enableMergeTwoSlices2InputDebug = false;
+		enableMergeTwoSlices4InputDebug = false;
+		enableDifferenceMasksBitTwiddleDebug = false;
+		enableFlattenWordSliceDebug = false;
+	}
+}
