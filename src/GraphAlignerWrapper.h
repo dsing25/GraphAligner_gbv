@@ -12,7 +12,7 @@
 
 using nJson = nlohmann::json;
 
-using ReusableStateType = GraphAlignerCommon<size_t, int64_t, uint32_t>::AlignerGraphsizedState;
+using ReusableStateType = GraphAlignerCommon<size_t, int64_t, uint64_t>::AlignerGraphsizedState;
 
 class SeedHit
 {

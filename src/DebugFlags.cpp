@@ -32,7 +32,7 @@ uint64_t flattenWordSliceIteration = 0;
 uint64_t EqVectorIteration = 0;
 
 
-bool debugTop = true;
+bool debugTop = false;
 
 // Helper function for debug logging
 void DEBUG_LOG(const std::string& functionName,
@@ -47,7 +47,7 @@ void DEBUG_LOG(const std::string& functionName,
 	if (increment) {
 		iterationCounter++;
 	}
-	std::ofstream dbg("32bitGBV.log", std::ios::app);
+	std::ofstream dbg("randomtest.log", std::ios::app);
 	dbg << functionName << " call #" << iterationCounter;
 	outputFunc(dbg);
 	dbg << std::endl;

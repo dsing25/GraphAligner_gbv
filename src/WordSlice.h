@@ -5,18 +5,14 @@
 #include <bitset>
 
 // Helper macro: prints binary(decimal) representation
-// For 32-bit: prints as 32-bit value
-// For 64-bit: prints as 64-bit value with hi/lo 32-bit split
-#define DBG_BITS_32(name, val) \
-	"\n  " name "=" << std::bitset<32>(val) << "(" << (val) << ")"
-
+// 64-bit mode: prints as 64-bit value with hi/lo 32-bit split
 #define DBG_BITS_64(name, val) \
 	"\n  " name "=" << std::bitset<64>(val) << "(" << (val) << ")" \
 	<< "\n    [hi]=" << std::bitset<32>((uint64_t)(val) >> 32) << "(" << ((uint64_t)(val) >> 32) << ")" \
 	<< " [lo]=" << std::bitset<32>((uint64_t)(val) & 0xFFFFFFFF) << "(" << ((uint64_t)(val) & 0xFFFFFFFF) << ")"
 
-// Default to 32-bit for current configuration
-#define DBG_BITS(name, val) DBG_BITS_32(name, val)
+// Default to 64-bit mode
+#define DBG_BITS(name, val) DBG_BITS_64(name, val)
 
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorCommon;
@@ -163,141 +159,6 @@ public:
 	}
 };
 
-template <>
-class WordConfiguration<uint32_t>
-{
-public:
-	static constexpr int WordSize = 32;
-	//number of bits per chunk
-	//prefix sum differences are calculated in chunks of log w bits
-	static constexpr int ChunkBits = 8;
-	static constexpr uint32_t AllZeros = 0x00000000;
-	static constexpr uint32_t AllOnes = 0xFFFFFFFF;
-	static constexpr uint32_t LastBit = 0x80000000;
-	//positions of the sign bits for each chunk
-	static constexpr uint32_t SignMask = 0x80808080;
-	//constant for multiplying the chunk popcounts into prefix sums
-	//this should be 1 at the start of each chunk
-	static constexpr uint32_t PrefixSumMultiplierConstant = 0x01010101;
-	//positions of the least significant bits for each chunk
-	static constexpr uint32_t LSBMask = 0x01010101;
-
-#ifdef NOBUILTINPOPCOUNT
-	static int popcount(uint32_t x)
-	{
-		//https://en.wikipedia.org/wiki/Hamming_weight
-		x -= (x >> 1) & 0x55555555;
-		x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
-		x = (x + (x >> 4)) & 0x0f0f0f0f;
-		return (x * 0x01010101) >> 24;
-	}
-#else
-	static int popcount(uint32_t x)
-	{
-		//https://gcc.gnu.org/onlinedocs/gcc-4.8.4/gcc/X86-Built-in-Functions.html
-		// return __builtin_popcount(x);
-		//for some reason __builtin_popcount takes 21 instructions so call assembly directly
-		__asm__("popcnt %0, %0" : "+r" (x));
-		return x;
-	}
-#endif
-
-
-	static uint32_t ChunkPopcounts(uint32_t value)
-	{
-		uint32_t x = value;
-		x -= (x >> 1) & 0x55555555;
-		x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
-		x = (x + (x >> 4)) & 0x0f0f0f0f;
-		return x;
-	}
-
-	static int BitPosition(uint32_t low, uint32_t high, int rank)
-	{
-		assert(rank >= 0);
-		if (popcount(low) <= rank)
-		{
-			rank -= popcount(low);
-			return 32 + BitPosition(high, rank);
-		}
-		return BitPosition(low, rank);
-	}
-
-	static int BitPosition(uint32_t number, int rank)
-	{
-		// // https://stackoverflow.com/questions/45482787/how-to-efficiently-find-the-n-th-set-bit
-		// uint32_t j = _pdep_u32(1 << rank, number);
-		// return (__builtin_ctz(j));
-		uint32_t bytes = ChunkPopcounts(number);
-		//cumulative popcount of each byte
-		uint32_t cumulative = bytes * PrefixSumMultiplierConstant;
-		//spread the rank into each byte
-		uint32_t rankFinder = ((rank + 1) & 0xFF) * PrefixSumMultiplierConstant;
-		//rankMask's msb will be 0 if the c. popcount at that byte is < rank, or 1 if >= rank
-		uint32_t rankMask = (cumulative | SignMask) - rankFinder;
-		//the total number of ones in rankMask is the number of bytes whose c. popcount is >= rank
-		//4 - that is the number of bytes whose c. popcount is < rank
-		int smallerBytes = 4 - ((((rankMask & SignMask) >> 7) * PrefixSumMultiplierConstant) >> 24);
-		assert(smallerBytes < 4);
-		//the bit position will be inside this byte
-		uint32_t interestingByte = (number >> (smallerBytes * 8)) & 0xFF;
-		if (smallerBytes > 0) rank -= (cumulative >> ((smallerBytes - 1) * 8)) & 0xFF;
-		assert(rank >= 0 && rank < 8);
-		//spread the 1's from interesting byte to each byte
-		//first put every pair of bits into each 2-byte boundary
-		//then select only those pairs
-		//then spread the pairs into each byte boundary
-		//and select the ones
-		uint32_t spreadBits = (((interestingByte * 0x00004001) & 0x00030003) * 0x00000081) & 0x01010101;
-/*
-0000 0000  0000 0000  0000 0000  abcd efgh
-0000 00ab  cdef gh00  0000 abcd  efgh 0000  * 0x00004001
-0000 00ab  0000 0000  0000 00cd  0000 0000  & 0x00030003
-000a b000  00ab 0000  000c d000  00cd 0000  * 0x00000081
-000a 0000  000b 0000  000c 0000  000d 0000  & 0x01010101
-*/
-		//find the position from the bits the same way as from the bytes
-		uint32_t cumulativeBits = spreadBits * PrefixSumMultiplierConstant;
-		uint32_t bitRankFinder = ((rank + 1) & 0xFF) * PrefixSumMultiplierConstant;
-		uint32_t bitRankMask = (cumulativeBits | SignMask) - bitRankFinder;
-		int smallerBits = 4 - ((((bitRankMask & SignMask) >> 7) * PrefixSumMultiplierConstant) >> 24);
-		assert(smallerBits >= 0);
-		assert(smallerBits < 8);
-		return smallerBytes * 8 + smallerBits;
-	}
-
-	static uint32_t MortonHigh(uint32_t left, uint32_t right)
-	{
-		return Interleave(left >> 16, right >> 16);
-	}
-
-	static uint32_t MortonLow(uint32_t left, uint32_t right)
-	{
-		return Interleave(left & 0xFFFF, right & 0xFFFF);
-	}
-
-	//http://graphics.stanford.edu/~seander/bithacks.html#InterleaveBMN
-	static uint32_t Interleave(uint32_t x, uint32_t y)
-	{
-		assert(x == (x & 0xFFFF));
-		assert(y == (y & 0xFFFF));
-		static const uint32_t B[] = {0x55555555, 0x33333333, 0x0F0F0F0F, 0x00FF00FF};
-		static const uint32_t S[] = {1, 2, 4, 8};
-
-		x = (x | (x << S[3])) & B[3];
-		x = (x | (x << S[2])) & B[2];
-		x = (x | (x << S[1])) & B[1];
-		x = (x | (x << S[0])) & B[0];
-
-		y = (y | (y << S[3])) & B[3];
-		y = (y | (y << S[2])) & B[2];
-		y = (y | (y << S[1])) & B[1];
-		y = (y | (y << S[0])) & B[0];
-
-		return x | (y << 1);
-	}
-};
-
 //uncomment if there's an undefined reference with -O0. why?
 // constexpr uint64_t WordConfiguration<uint64_t>::AllZeros;
 // constexpr uint64_t WordConfiguration<uint64_t>::AllOnes;
@@ -422,8 +283,7 @@ public:
 		          [&](std::ostream& dbg) {
 			          dbg << DBG_BITS("VP", VP)
 			              << DBG_BITS("VN", VN)
-			              << DBG_BITS("regfile[25]", regfile[25])
-			              << "\n  scoreEnd=" << scoreEnd;
+			              << DBG_BITS("regfile[25]", regfile[25]);
 		          });
 		// --- End debug logging block ---
 
@@ -655,7 +515,7 @@ private:
 		return result;
 	}
 
-	static Word bytePrefixSums(Word value, int addition)
+	static uint64_t bytePrefixSums(uint64_t value, int addition)
 	{
 		value <<= WordConfiguration<Word>::ChunkBits;
 		assert(addition >= 0);
@@ -663,13 +523,13 @@ private:
 		return value * WordConfiguration<Word>::PrefixSumMultiplierConstant;
 	}
 
-	static Word bytePrefixSums(Word value)
+	static uint64_t bytePrefixSums(uint64_t value)
 	{
 		value <<= WordConfiguration<Word>::ChunkBits;
 		return value * WordConfiguration<Word>::PrefixSumMultiplierConstant;
 	}
 
-	static Word byteVPVNSum(Word prefixSumVP, Word prefixSumVN)
+	static uint64_t byteVPVNSum(uint64_t prefixSumVP, uint64_t prefixSumVN)
 	{
 		Word result = WordConfiguration<Word>::SignMask;
 		assert((prefixSumVP & result) == 0);
@@ -697,7 +557,7 @@ private:
 	static WordSlice mergeTwoSlices(WordSlice left, WordSlice right)
 	{
 		auto& regfile = GraphAlignerBitvectorCommon<LengthType, ScoreType, Word>::regfile;
-		static_assert(std::is_same<Word, uint64_t>::value || std::is_same<Word, uint32_t>::value, "Word must be either uint64_t or uint32_t");
+		static_assert(std::is_same<Word, uint64_t>::value);
 
 		regfile[12] = left.VN;
 		regfile[13] = left.VP;
@@ -863,17 +723,46 @@ private:
 } */
 		assert((regfile[20] & regfile[21]) == 0);
 
+		// === Detailed merge4inputs logging ===
+		static int merge4_log_count = 10;
+		std::ofstream merge4log;
+		bool should_log_merge4 = (merge4_log_count < 5);
+		if (should_log_merge4) {
+			merge4log.open("merge4inputs.log", std::ios::app);
+			merge4log << "\n========== MERGE4INPUTS CALL #" << (merge4_log_count + 1) << " ==========\n";
+			merge4log << "Initial state:" << DBG_BITS("reg[20]=leftSmaller", regfile[20])
+			          << DBG_BITS("reg[21]=rightSmaller", regfile[21]) << "\n";
+		}
+
 		regfile[22] = regfile[20] | regfile[21]; // leftsmaller | rightsmaller
-		regfile[23] = regfile[21] << 1; // rightsmaller << 1
-		regfile[22] = regfile[22] - regfile[23]; // ((leftSmaller | rightSmaller) - (rightSmaller << 1))
-		regfile[22] = regfile[21] | regfile[22]; // rightsmaller | regfile25
-		regfile[23] = ~regfile[20]; // ~leftsmaller
-		regfile[22] = regfile[22] & regfile[23]; // reg23 = mask
+		if (should_log_merge4) merge4log << "After reg[22] = reg[20] | reg[21]:" << DBG_BITS("reg[22]", regfile[22]) << "\n";
 
 		regfile[23] = regfile[21] << 1; // rightsmaller << 1
+		if (should_log_merge4) merge4log << "After reg[23] = reg[21] << 1:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+
+		regfile[22] = regfile[22] - regfile[23]; // ((leftSmaller | rightSmaller) - (rightSmaller << 1))
+		if (should_log_merge4) merge4log << "After reg[22] = reg[22] - reg[23]:" << DBG_BITS("reg[22]", regfile[22]) << "\n";
+
+		regfile[22] = regfile[21] | regfile[22]; // rightsmaller | regfile25
+		if (should_log_merge4) merge4log << "After reg[22] = reg[21] | reg[22]:" << DBG_BITS("reg[22]", regfile[22]) << "\n";
+
+		regfile[23] = ~regfile[20]; // ~leftsmaller
+		if (should_log_merge4) merge4log << "After reg[23] = ~reg[20]:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+
+		regfile[22] = regfile[22] & regfile[23]; // reg22 = mask
+		if (should_log_merge4) merge4log << "After reg[22] = reg[22] & reg[23] (MASK):" << DBG_BITS("reg[22]=MASK", regfile[22]) << "\n";
+
+		regfile[23] = regfile[21] << 1; // rightsmaller << 1
+		if (should_log_merge4) merge4log << "After reg[23] = reg[21] << 1:" << DBG_BITS("reg[23]", regfile[23]) << "\n";
+
 		regfile[23] = regfile[20] & regfile[23]; // leftreduction = reg24
+		if (should_log_merge4) merge4log << "After reg[23] = reg[20] & reg[23] (leftreduction):" << DBG_BITS("reg[23]=leftreduction", regfile[23]) << "\n";
+
 		regfile[24] = regfile[20] << 1; // leftsmaller << 1
+		if (should_log_merge4) merge4log << "After reg[24] = reg[20] << 1:" << DBG_BITS("reg[24]", regfile[24]) << "\n";
+
 		regfile[24] = regfile[21] & regfile[24]; // rightreduction = reg25
+		if (should_log_merge4) merge4log << "After reg[24] = reg[21] & reg[24] (rightreduction):" << DBG_BITS("reg[24]=rightreduction", regfile[24]) << "\n";
 
 		// if ((regfile[21] & 1) && regfile[14] < regfile[18])
 		// {
@@ -883,30 +772,68 @@ private:
 		// regfile[24] = ((regfile[21] & 1) && (regfile[14] < regfile[18])) ? (regfile[24] | 1) : regfile[24];
 		regfile[0] = 0;
 		regfile[25] = 1;
-		regfile[26] = regfile[21] & regfile[25];
-		regfile[27] = (regfile[18] > regfile[14]) ? regfile[25] : regfile[0];
-		regfile[28] = regfile[26] & regfile[27];
-		regfile[26] = regfile[24] | regfile[25];
-		regfile[24] = (regfile[28] == regfile[25]) ? regfile[26] : regfile[24];
+		if (should_log_merge4) merge4log << "After reg[0] = 0, reg[25] = 1:" << DBG_BITS("reg[0]", regfile[0]) << DBG_BITS("reg[25]", regfile[25]) << "\n";
 
-		assert((regfile[23] & regfile[17]) == regfile[23]); 
-		assert((regfile[24] & regfile[13]) == regfile[24]);  
-		assert((regfile[23] & regfile[12]) == regfile[23]);  
-		assert((regfile[24] & regfile[16]) == regfile[24]); 
+		regfile[26] = regfile[21] & regfile[25];
+		if (should_log_merge4) merge4log << "After reg[26] = reg[21] & reg[25]:" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+
+		regfile[27] = (regfile[18] > regfile[14]) ? regfile[25] : regfile[0];
+		if (should_log_merge4) merge4log << "After reg[27] = (reg[18] > reg[14]) ? reg[25] : reg[0]:" << DBG_BITS("reg[27]", regfile[27])
+		                                  << " (reg[18]=" << regfile[18] << ", reg[14]=" << regfile[14] << ")\n";
+
+		regfile[28] = regfile[26] & regfile[27];
+		if (should_log_merge4) merge4log << "After reg[28] = reg[26] & reg[27]:" << DBG_BITS("reg[28]", regfile[28]) << "\n";
+
+		regfile[26] = regfile[24] | regfile[25];
+		if (should_log_merge4) merge4log << "After reg[26] = reg[24] | reg[25]:" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+
+		regfile[24] = (regfile[28] == regfile[25]) ? regfile[26] : regfile[24];
+		if (should_log_merge4) merge4log << "After reg[24] = (reg[28] == reg[25]) ? reg[26] : reg[24]:" << DBG_BITS("reg[24]=rightreduction_final", regfile[24]) << "\n";
+
+		assert((regfile[23] & regfile[17]) == regfile[23]);
+		assert((regfile[24] & regfile[13]) == regfile[24]);
+		assert((regfile[23] & regfile[12]) == regfile[23]);
+		assert((regfile[24] & regfile[16]) == regfile[24]);
 
 		regfile[25] = ~regfile[23]; // ~leftreduction
+		if (should_log_merge4) merge4log << "After reg[25] = ~reg[23] (~leftreduction):" << DBG_BITS("reg[25]", regfile[25]) << "\n";
+
 		regfile[12] = regfile[12] & regfile[25]; // leftvn &= ~leftreduction
+		if (should_log_merge4) merge4log << "After reg[12] = reg[12] & reg[25] (leftvn &= ~leftreduction):" << DBG_BITS("reg[12]", regfile[12]) << "\n";
+
 		regfile[25] = ~regfile[24]; // ~rightreduction
+		if (should_log_merge4) merge4log << "After reg[25] = ~reg[24] (~rightreduction):" << DBG_BITS("reg[25]", regfile[25]) << "\n";
+
 		regfile[16] = regfile[16] & regfile[25]; // rightvn &= ~rightreduction
+		if (should_log_merge4) merge4log << "After reg[16] = reg[16] & reg[25] (rightvn &= ~rightreduction):" << DBG_BITS("reg[16]", regfile[16]) << "\n";
 
 		regfile[25] = ~regfile[22]; //~mask
+		if (should_log_merge4) merge4log << "After reg[25] = ~reg[22] (~MASK):" << DBG_BITS("reg[25]=~MASK", regfile[25]) << DBG_BITS("reg[22]=MASK", regfile[22]) << "\n";
+
 		regfile[26] = regfile[12] & regfile[25]; // leftVN & ~mask
+		if (should_log_merge4) merge4log << "After reg[26] = reg[12] & reg[25] (leftVN & ~mask):" << DBG_BITS("reg[26]", regfile[26]) << "\n";
+
 		regfile[27] = regfile[16] & regfile[22]; // rightVN & mask
+		if (should_log_merge4) merge4log << "After reg[27] = reg[16] & reg[22] (rightVN & mask):" << DBG_BITS("reg[27]", regfile[27]) << "\n";
+
 		regfile[28] = regfile[26] | regfile[27]; // (left.VN & ~mask) | (right.VN & mask);
+		if (should_log_merge4) merge4log << "After reg[28] = reg[26] | reg[27] (result.VN):" << DBG_BITS("reg[28]=result.VN", regfile[28]) << "\n";
 
 		regfile[26] = regfile[13] & regfile[25]; // leftVP & ~mask
+		if (should_log_merge4) merge4log << "After reg[26] = reg[13] & reg[25] (leftVP & ~mask):" << DBG_BITS("reg[26]", regfile[26])
+		                                  << DBG_BITS("reg[13]=left.VP", regfile[13]) << DBG_BITS("reg[25]=~mask", regfile[25]) << "\n";
+
 		regfile[27] = regfile[17] & regfile[22]; // rightVP & mask
+		if (should_log_merge4) merge4log << "After reg[27] = reg[17] & reg[22] (rightVP & mask):" << DBG_BITS("reg[27]", regfile[27])
+		                                  << DBG_BITS("reg[17]=right.VP", regfile[17]) << DBG_BITS("reg[22]=mask", regfile[22]) << "\n";
+
 		regfile[29] = regfile[26] | regfile[27]; // (left.VP & ~mask) | (right.VP & mask);
+		if (should_log_merge4) {
+			merge4log << "After reg[29] = reg[26] | reg[27] (result.VP - FINAL):" << DBG_BITS("reg[29]=result.VP", regfile[29]) << "\n";
+			merge4log << "========== END CALL #" << (merge4_log_count + 1) << " ==========\n\n";
+			merge4log.close();
+			merge4_log_count++;
+		}
 
 		assert((regfile[28] & regfile[29]) == 0);
 
@@ -919,7 +846,7 @@ private:
 		right.VN = regfile[16];
 
 		// --- Debug logging block ---
-		DEBUG_LOG("mergeTwoSlices4Input - Post Op",
+		DEBUG_LOG("mergeTwoSlices4Input - Post Swap",
 		          enableMergeTwoSlices4InputDebug,
 		          mergeTwoSlices4InputIteration,
 		          [&](std::ostream& dbg) {
@@ -1123,9 +1050,9 @@ private:
 	static std::pair<Word, Word> differenceMasksBitTwiddle(Word leftVP, Word leftVN, Word rightVP, Word rightVN, int scoreDifference)
 	{
 		// Diffmasks logging - only first 5 calls
-		static int diffmasks_call_count = 15;
+		static int diffmasks_call_count = 50;
 		diffmasks_call_count++;
-		bool should_log = (diffmasks_call_count <= 8);
+		bool should_log = (diffmasks_call_count <= 5);
 		std::ofstream difflog;
 		if (should_log) {
 			difflog.open("diffmasks.log", std::ios::app);
@@ -1626,8 +1553,8 @@ private:
 		{
 			return std::make_pair(allones, allzeros);
 		}
-		if (scoreDifference == WordConfiguration<Word>::WordSize * 2 && rightVN == allones && leftVP == allones)
-		{
+		if (scoreDifference == 128 && rightVN == allones && leftVP == allones)
+				{
 			return std::make_pair(allones ^ ((Word)1 << (WordConfiguration<Word>::WordSize-1)), allzeros);
 		}
 		else if (scoreDifference == 0 && rightVN == allones && leftVP == allones)
@@ -1635,10 +1562,10 @@ private:
 			return std::make_pair(0, allones);
 		}
 		assert(scoreDifference >= 0);
-		assert(scoreDifference < WordConfiguration<Word>::WordSize * 2);
-		Word byteVPVNSumLeft = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVP), 0), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVN), 0));
-		Word byteVPVNSumRight = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVP), scoreDifference), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVN), 0));
-		Word difference = byteVPVNSumLeft;
+		assert(scoreDifference < 128);
+		uint64_t byteVPVNSumLeft = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVP), 0), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(leftVN), 0));
+		uint64_t byteVPVNSumRight = byteVPVNSum(bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVP), scoreDifference), bytePrefixSums(WordConfiguration<Word>::ChunkPopcounts(rightVN), 0));
+		uint64_t difference = byteVPVNSumLeft;
 		{
 			//take the bytvpvnsumright and split it from positive/negative values into two vectors with positive values, one which needs to be added and the other deducted
 			//smearmask is 1 where the number needs to be deducted, and 0 where it needs to be added

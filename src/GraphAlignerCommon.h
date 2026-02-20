@@ -442,7 +442,7 @@ public:
 		alignmentXScore(-1),
 		mappingQuality(255)
 		{}
-		AlignmentItem(GraphAlignerCommon<size_t, int64_t, uint32_t>::OnewayTrace&& trace, size_t cellsProcessed, size_t ms) :
+		AlignmentItem(GraphAlignerCommon<size_t, int64_t, uint64_t>::OnewayTrace&& trace, size_t cellsProcessed, size_t ms) :
 		corrected(),
 		alignment(),
 		trace(),
@@ -454,7 +454,7 @@ public:
 		alignmentXScore(-1),
 		mappingQuality(255)
 		{
-			this->trace = std::make_shared<GraphAlignerCommon<size_t, int64_t, uint32_t>::OnewayTrace>();
+			this->trace = std::make_shared<GraphAlignerCommon<size_t, int64_t, uint64_t>::OnewayTrace>();
 			*this->trace = std::move(trace);
 		}
 		bool alignmentFailed() const
@@ -468,7 +468,7 @@ public:
 		std::string corrected;
 		std::string GAFline;
 		std::shared_ptr<vg::Alignment> alignment;
-		std::shared_ptr<GraphAlignerCommon<size_t, int64_t, uint32_t>::OnewayTrace> trace;
+		std::shared_ptr<GraphAlignerCommon<size_t, int64_t, uint64_t>::OnewayTrace> trace;
 		size_t seedGoodness;
 		size_t cellsProcessed;
 		size_t elapsedMilliseconds;
