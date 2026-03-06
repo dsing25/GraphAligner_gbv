@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <string_view>
 #include "AlignmentGraph.h"
 #include "NodeSlice.h"
@@ -17,6 +18,9 @@
 #include "GraphAlignerCommon.h"
 #include "ArrayPriorityQueue.h"
 #include "DebugFlags.h"
+
+// Debug logging toggle - set to true to enable detailed logging
+#define ENABLE_SLICE_DEBUG false
 
 template <typename LengthType, typename ScoreType, typename Word>
 class GraphAlignerBitvectorBanded
@@ -407,8 +411,8 @@ private:
 		          [&](std::ostream& dbg) {
 			          dbg << " | j=" << j
 			              << " | calculableQueue.size()=" << calculableQueue.size()
-			              << " | sequence[0:" << WordConfiguration<Word>::WordSize << "]=";
-			          for (size_t idx = 0; idx < std::min<size_t>(WordConfiguration<Word>::WordSize, sequence.size()); ++idx) {
+			              << " | sequence[" << j << ":" << (j + WordConfiguration<Word>::WordSize) << "]=";
+			          for (size_t idx = j; idx < std::min<size_t>(j + WordConfiguration<Word>::WordSize, sequence.size()); ++idx) {
 				          dbg << sequence[idx];
 			          }
 		          });
@@ -589,7 +593,7 @@ private:
 			}
 			auto i = pair.target;
 			//NEW CODE ADDED FOR GRAPH DEBUG
-			printGraphStructureForNodes(std::vector<size_t>{i});
+			// printGraphStructureForNodes(std::vector<size_t>{i});
 			bool firstCalc = false;
 			assert(allowedBigraphNodesThisSlice[params.graph.BigraphNodeID(i)]);
 			if (!currentBand[i])
@@ -761,6 +765,20 @@ private:
 	template <typename PriorityQueue>
 	void fillDPSlice(const std::string_view& sequence, DPSlice& slice, const DPSlice& previousSlice, const std::vector<bool>& previousBand, std::vector<bool>& currentBand, PriorityQueue& calculableQueue, ScoreType bandwidth, const std::vector<ProcessedSeedHit>& seedHits, size_t seedhitStart, size_t seedhitEnd, const WordSlice extraSlice, std::vector<bool>& hasSeedStart, bool storeNodeExactEndposScores, const std::vector<bool>& allowedBigraphNodesThisSlice) const
 	{
+		// --- Debug logging block ---
+		DEBUG_LOG("fillDPSlice",
+		          enableFillDPSliceDebug,
+		          fillDPSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | slice.j=" << slice.j
+			              << " | previousSlice.minScore=" << previousSlice.minScore
+			              << " | bandwidth=" << bandwidth
+			              << " | seedhitStart=" << seedhitStart
+			              << " | seedhitEnd=" << seedhitEnd
+			              << " | extraSlice.scoreEnd=" << extraSlice.scoreEnd;
+		          });
+		// --- End debug logging block ---
+
 		NodeCalculationResult sliceResult;
 		assert((ScoreType)previousSlice.bandwidth < std::numeric_limits<ScoreType>::max());
 		assert((ScoreType)previousSlice.bandwidth >= 0);
@@ -811,6 +829,19 @@ private:
 	template <typename PriorityQueue>
 	DPSlice pickMethodAndExtendFill(const std::string_view& sequence, const DPSlice& previous, const std::vector<bool>& previousBand, std::vector<bool>& currentBand, PriorityQueue& calculableQueue, ScoreType bandwidth, const std::vector<ProcessedSeedHit>& seedHits, size_t seedhitStart, size_t seedhitEnd, const WordSlice extraSlice, std::vector<bool>& hasSeedStart, bool storeNodeExactEndposScores, const std::vector<bool>& allowedBigraphNodesThisSlice) const
 	{
+		// --- Debug logging block ---
+		DEBUG_LOG("pickMethodAndExtendFill",
+		          enablePickMethodAndExtendFillDebug,
+		          pickMethodAndExtendFillIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | previous.j=" << previous.j
+			              << " | bandTest.j=" << (previous.j + WordConfiguration<Word>::WordSize)
+			              << " | extraSlice.scoreEnd=" << extraSlice.scoreEnd
+			              << " | seedhitStart=" << seedhitStart
+			              << " | seedhitEnd=" << seedhitEnd;
+		          });
+		// --- End debug logging block ---
+
 		DPSlice bandTest;
 		bandTest.scores.addEmptyNodeMap(previous.scores.size());
 		bandTest.j = previous.j + WordConfiguration<Word>::WordSize;
@@ -1018,6 +1049,18 @@ private:
       const std::vector<ScoreType>& sliceMaxScores,
       const std::vector<std::tuple<size_t, int, int>>& forbiddenNodes) const
 	{
+		// --- Debug logging block ---
+		DEBUG_LOG("getMultiseedSlices START",
+		          enableGetMultiseedSlicesDebug,
+		          getMultiseedSlicesIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | sequence.size()=" << sequence.size()
+			              << " | numSlices=" << numSlices
+			              << " | seedHits.size()=" << seedHits.size()
+			              << " | initialSlice.j=" << initialSlice.j
+			              << " | initialSlice.scores.size()=" << initialSlice.scores.size();
+		          });
+		// --- End debug logging block ---
 
 		assert(reusableState.componentQueue.valid());
 		assert(initialSlice.j == (size_t)-WordConfiguration<Word>::WordSize);
@@ -1035,6 +1078,19 @@ private:
 		auto nodeAllowanceVectors = getNodeAllowanceVectors(forbiddenNodes, numSlices);
 		for (size_t slice = 0; slice < numSlices; slice++)
 		{
+			// --- Debug logging block ---
+			DEBUG_LOG("getMultiseedSlices ITERATION",
+			          enableGetMultiseedSlicesDebug,
+			          getMultiseedSlicesIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << " | slice=" << slice
+				              << " | numSlices=" << numSlices
+				              << " | lastSlice.j=" << lastSlice.j
+				              << " | lastSlice.minScore=" << lastSlice.minScore;
+			          },
+			          false);  // Don't increment - supplementary log
+			// --- End debug logging block ---
+
 			int bandwidth = params.alignmentBandwidth;
 #ifdef SLICEVERBOSE
 			auto timeStart = std::chrono::system_clock::now();
@@ -1080,6 +1136,36 @@ private:
 #endif
 
 			assert(newSlice.j == lastSlice.j + WordConfiguration<Word>::WordSize);
+
+		// --- Debug: Print all node scores for this slice ---
+		DEBUG_LOG("SLICE_NODE_SCORES",
+		          enableGetMultiseedSlicesDebug,
+		          getMultiseedSlicesIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | slice=" << slice
+			              << " | j=" << newSlice.j
+			              << " | minScore=" << newSlice.minScore
+			              << " | numNodes=" << newSlice.scores.size();
+			          for (auto nodeEntry : newSlice.scores)
+			          {
+				          auto nodeId = nodeEntry.first;
+				          auto nodeLen = params.graph.NodeLength(nodeId);
+				          std::string nodeSeq = "";
+				          for (size_t i = 0; i < std::min(nodeLen, (size_t)50); i++)
+				          {
+					          char c = params.graph.NodeSequences(nodeId, i);
+					          nodeSeq += c;
+				          }
+				          if (nodeLen > 50) nodeSeq += "...";
+				          
+				          dbg << "\n    Node[" << nodeEntry.first << "] len=" << nodeLen << " seq=" << nodeSeq
+				              << " | endSlice.scoreEnd=" << nodeEntry.second.endSlice.scoreEnd
+				              << " | startSlice.scoreEnd=" << nodeEntry.second.startSlice.scoreEnd
+				              << " | minScore=" << nodeEntry.second.minScore;
+			          }
+		          },
+		          false);  // Don't increment - supplementary log
+
 
 			cellsProcessed += newSlice.cellsProcessed;
 

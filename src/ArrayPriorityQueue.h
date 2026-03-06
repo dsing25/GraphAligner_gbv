@@ -121,6 +121,17 @@ public:
 		assert(SparseStorage || index < extras.size());
 		return getVec(extras, index).size();
 	}
+	template <typename Callback>
+	void forEachItem(Callback callback) const
+	{
+		for (size_t priority = 0; priority < queues.size(); priority++)
+		{
+			for (const auto& item : queues[priority])
+			{
+				callback(priority, item);
+			}
+		}
+	}
 private:
 	const std::vector<T>& getVec(const std::vector<std::vector<T>>& list, size_t index) const
 	{

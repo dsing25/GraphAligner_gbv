@@ -27,11 +27,20 @@ extern uint64_t mergeTwoSlices4InputIteration;
 extern bool enableDifferenceMasksBitTwiddleDebug;
 extern uint64_t differenceMasksBitTwiddleIteration;
 
-extern bool enableFlattenWordSliceDebug;
-extern uint64_t flattenWordSliceIteration;
-
 extern uint64_t EqVectorIteration;
 
+// High-level trace flags
+extern bool enableGetMultiseedSlicesDebug;
+extern uint64_t getMultiseedSlicesIteration;
+
+extern bool enablePickMethodAndExtendFillDebug;
+extern uint64_t pickMethodAndExtendFillIteration;
+
+extern bool enableFillDPSliceDebug;
+extern uint64_t fillDPSliceIteration;
+
+extern bool enableGetSeedSliceDebug;
+extern uint64_t getSeedSliceIteration;
 
 extern bool debugTop;
 

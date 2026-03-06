@@ -130,6 +130,18 @@ public:
 		assert(SparseStorage ||index < extras.size());
 		return getVec(extras, index).size();
 	}
+	template <typename Callback>
+	void forEachItem(Callback callback) const
+	{
+		for (size_t i = 0; i < active.size(); i++)
+		{
+			if (!active[i]) continue;
+			for (const auto& item : getVec(extras, i))
+			{
+				callback(item.priority, item);
+			}
+		}
+	}
 	bool valid() const
 	{
 		return active.size() > 0;

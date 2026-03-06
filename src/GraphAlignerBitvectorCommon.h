@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include <iostream>
+#include <fstream>
 #include <bitset>
 #include "AlignmentGraph.h"
 #include "NodeSlice.h"
@@ -262,7 +263,7 @@ public:
 	// 	return std::make_tuple(slice, Ph, Mh);
 	// }
 
-		
+	
 static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(Word Eq, WordSlice slice, Word hinP, Word hinN)
 {
 		// --- Debug logging block ---
@@ -279,7 +280,24 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		          });
 		// --- End debug logging block ---
 
-	
+		// --- Line-by-line debug logging (4 calls max) ---
+		static int debug_call_count = 50;
+		static std::ofstream* debug_file = nullptr;
+		bool do_debug = (debug_call_count < 4);
+
+		if (do_debug) {
+			if (!debug_file) {
+				debug_file = new std::ofstream("slicedebug.log", std::ios::out);
+			}
+			debug_call_count++;
+			*debug_file << "========== getNextSlice Call #" << debug_call_count << " ==========\n";
+			*debug_file << "INPUT: Eq=" << Eq << " hinP=" << hinP << " hinN=" << hinN
+			            << " VN=" << slice.VN << " VP=" << slice.VP
+			            << " scoreEnd=" << slice.scoreEnd << "\n";
+		}
+		// --- End line-by-line debug header ---
+
+
 	Word Xh = 0, Xv = 0, tempMh = 0, tempPh = 0, Ph = 0, Mh = 0, temp1 = 0, temp2 = 0, temp3 = 0, temp4 = 0, temp5 = 0;
 
 	// Word regfile[32];
@@ -305,7 +323,7 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	// regfile[17] = merged_vp;
 	// regfile[18] = merged_sbef;
 	// regfile[19] = merged_send;
-	regfile[20] = temp1; 
+	regfile[20] = temp1;
 	regfile[21] = temp2;
 	regfile[22] = temp3;
 	regfile[23] = temp4;
@@ -318,46 +336,101 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 	// regfile[30] = temp11;
 	// regfile[31] = temp12;
 
+	if (do_debug) {
+		*debug_file << "INIT:" << DBG_BITS("regfile[1](Eq)", regfile[1])
+		            << DBG_BITS("regfile[2](VN)", regfile[2])
+		            << DBG_BITS("regfile[3](VP)", regfile[3])
+		            << "\n  regfile[4](hinN)=" << regfile[4]
+		            << " regfile[5](hinP)=" << regfile[5]
+		            << " regfile[11](scoreEnd)=" << regfile[11] << "\n";
+	}
+
 	// main compute starts here
 
 	regfile[20] = tempMh; // use temp1 as tempMh
 	regfile[21] = tempPh; // use temp2 as tempPh
 
 	regfile[7] = regfile[1] | regfile[2]; 									// Xv = Eq | VN
+	if (do_debug) *debug_file << "Line 326: regfile[7](Xv) = regfile[1] | regfile[2]" << DBG_BITS("result", regfile[7]) << "\n";
+
 	regfile[1] = regfile[1] | regfile[4];             						// Eq |= hinN
+	if (do_debug) *debug_file << "Line 327: regfile[1](Eq) |= regfile[4]" << DBG_BITS("result", regfile[1]) << "\n";
 
 	regfile[22] = regfile[1] & regfile[3];      							// temp3 = Eq & VP
+	if (do_debug) *debug_file << "Line 329: regfile[22](temp3) = regfile[1] & regfile[3]" << DBG_BITS("result", regfile[22]) << "\n";
+
 	regfile[23] = regfile[22] + regfile[3];     							// temp4 = temp3 + VP
+	if (do_debug) *debug_file << "Line 330: regfile[23](temp4) = regfile[22] + regfile[3]" << DBG_BITS("result", regfile[23]) << "\n";
+
 	regfile[24] = regfile[23] ^ regfile[3];     							// temp5 = temp4 ^ VP
+	if (do_debug) *debug_file << "Line 331: regfile[24](temp5) = regfile[23] ^ regfile[3]" << DBG_BITS("result", regfile[24]) << "\n";
+
 	regfile[6]  = regfile[24] | regfile[1];     							// Xh = temp5 | Eq
+	if (do_debug) *debug_file << "Line 332: regfile[6](Xh) = regfile[24] | regfile[1]" << DBG_BITS("result", regfile[6]) << "\n";
 
 	regfile[22] = regfile[3] | regfile[6];      							// temp3 = VP | Xh
+	if (do_debug) *debug_file << "Line 334: regfile[22](temp3) = regfile[3] | regfile[6]" << DBG_BITS("result", regfile[22]) << "\n";
+
 	regfile[23] = ~regfile[22];                 							// temp4 = ~temp3
+	if (do_debug) *debug_file << "Line 335: regfile[23](temp4) = ~regfile[22]" << DBG_BITS("result", regfile[23]) << "\n";
+
 	regfile[8]  = regfile[2] | regfile[23];     							// Ph = VN | temp4
+	if (do_debug) *debug_file << "Line 336: regfile[8](Ph) = regfile[2] | regfile[23]" << DBG_BITS("result", regfile[8]) << "\n";
 
 	regfile[9] = regfile[3] & regfile[6]; 									// Mh =  VP & Xh
+	if (do_debug) *debug_file << "Line 338: regfile[9](Mh) = regfile[3] & regfile[6]" << DBG_BITS("result", regfile[9]) << "\n";
+
 	regfile[22] = regfile[9] << 1;         									// temp3 = Mh << 1
+	if (do_debug) *debug_file << "Line 339: regfile[22](temp3) = regfile[9] << 1" << DBG_BITS("result", regfile[22]) << "\n";
+
 	regfile[20]  = regfile[22] | regfile[4]; 								// tempMh = temp3 | hinN
+	if (do_debug) *debug_file << "Line 340: regfile[20](tempMh) = regfile[22] | regfile[4]" << DBG_BITS("result", regfile[20]) << "\n";
 
 	regfile[4]  = regfile[9] >> (WordConfiguration<Word>::WordSize-1); 										// hinN = Mh >> (word)
+	if (do_debug) *debug_file << "Line 342: regfile[4](hinN) = regfile[9] >> (WordSize-1) = " << regfile[4] << "\n";
+
 	regfile[22] = regfile[8] << 1;                                       	// temp3 = Ph << 1
+	if (do_debug) *debug_file << "Line 343: regfile[22](temp3) = regfile[8] << 1" << DBG_BITS("result", regfile[22]) << "\n";
+
 	regfile[21] = regfile[22] | regfile[5];                              	// tempPh = temp3 | hinP
+	if (do_debug) *debug_file << "Line 344: regfile[21](tempPh) = regfile[22] | regfile[5]" << DBG_BITS("result", regfile[21]) << "\n";
 
 	regfile[23] = regfile[7] | regfile[21];      							// temp4 = Xv | tempPh
+	if (do_debug) *debug_file << "Line 346: regfile[23](temp4) = regfile[7] | regfile[21]" << DBG_BITS("result", regfile[23]) << "\n";
+
 	regfile[24] = ~regfile[23];                  							// temp5 = ~temp4
+	if (do_debug) *debug_file << "Line 347: regfile[24](temp5) = ~regfile[23]" << DBG_BITS("result", regfile[24]) << "\n";
+
 	regfile[3]  = regfile[20] | regfile[24];      							// VP = tempMh | temp5
+	if (do_debug) *debug_file << "Line 348: regfile[3](VP) = regfile[20] | regfile[24]" << DBG_BITS("result", regfile[3]) << "\n";
 
 	regfile[5]  = regfile[8] >> (WordConfiguration<Word>::WordSize-1);        									// hinP = Ph >> (word)
+	if (do_debug) *debug_file << "Line 350: regfile[5](hinP) = regfile[8] >> (WordSize-1) = " << regfile[5] << "\n";
+
 	regfile[2]  = regfile[21] & regfile[7];									// VN = tempPh & Xv
+	if (do_debug) *debug_file << "Line 351: regfile[2](VN) = regfile[21] & regfile[7]" << DBG_BITS("result", regfile[2]) << "\n";
 
 	regfile[11] = regfile[11] - regfile[4]; 								// scoreEnd -= hinN
+	if (do_debug) *debug_file << "Line 353: regfile[11](scoreEnd) -= regfile[4] = " << regfile[11] << "\n";
+
 	regfile[11] = regfile[11] + regfile[5]; 								// scoreEnd += hinP
+	if (do_debug) *debug_file << "Line 354: regfile[11](scoreEnd) += regfile[5] = " << regfile[11] << "\n";
 
 	slice.VN = regfile[2];
 	slice.VP = regfile[3];
 	slice.scoreEnd = regfile[11];
 	Ph = regfile[8];
 	Mh = regfile[9];
+
+	if (do_debug) {
+		*debug_file << "OUTPUT:" << DBG_BITS("VN", slice.VN)
+		            << DBG_BITS("VP", slice.VP)
+		            << "\n  scoreEnd=" << slice.scoreEnd
+		            << DBG_BITS("Ph", Ph)
+		            << DBG_BITS("Mh", Mh) << "\n";
+		*debug_file << "========================================\n\n";
+		debug_file->flush();
+	}
 
 		// --- Debug logging block ---
 		DEBUG_LOG("getNextSlice - Post Op",
@@ -390,19 +463,6 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 	static __attribute__((noinline)) WordSlice flattenWordSlice(WordSlice slice, size_t row)
 	{
-
-		// --- Debug logging block ---
-		DEBUG_LOG("flattenWordSlice",
-		          enableFlattenWordSliceDebug,
-		          flattenWordSliceIteration,
-		          [&](std::ostream& dbg) {
-			          dbg << "\n  row=" << row
-			              << DBG_BITS("slice.VN", slice.VN)
-			              << DBG_BITS("slice.VP", slice.VP)
-			              << "\n  slice.scoreEnd=" << slice.scoreEnd;
-		          });
-		// --- End debug logging block ---
-
 		Word mask = 0;
 
 		regfile[2] = slice.VN;
@@ -487,9 +547,9 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		          EqVectorIteration,
 		          [&](std::ostream& dbg) {
 			          dbg << DBG_BITS("BA", EqV.getEqI(0))
-			              << DBG_BITS("BT", EqV.getEqI(1))
-			              << DBG_BITS("BC", EqV.getEqI(2))
-			              << DBG_BITS("BG", EqV.getEqI(3));
+			              << DBG_BITS("BC", EqV.getEqI(1))
+			              << DBG_BITS("BG", EqV.getEqI(2))
+			              << DBG_BITS("BT", EqV.getEqI(3));
 		          });
 		// --- End debug logging block ---
 
@@ -498,6 +558,14 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 	static WordSlice getSeedSlice(size_t j, size_t seqLen, const Params& params)
 	{
+		DEBUG_LOG("getSeedSlice",
+		          enableGetSeedSliceDebug,
+		          getSeedSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | j=" << j
+			              << " | seqLen=" << seqLen;
+		          });
+
 		assert(j % WordConfiguration<Word>::WordSize == 0);
 		WordSlice result { WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllZeros, 0 };
 		ScoreType oldSeedScore = 0;
@@ -528,6 +596,17 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		result.VP &= ~((Word)1);
 		result.VN |= (Word)1;
 		assert(result.getScoreBeforeStart() < (ScoreType)j + (ScoreType)WordConfiguration<Word>::WordSize);
+
+		DEBUG_LOG("getSeedSlice RESULT",
+		          enableGetSeedSliceDebug,
+		          getSeedSliceIteration,
+		          [&](std::ostream& dbg) {
+			          dbg << " | result.VP=" << result.VP
+			              << " | result.VN=" << result.VN
+			              << " | result.scoreEnd=" << result.scoreEnd;
+		          },
+		          false);  // Don't increment - supplementary log
+
 		return result;
 	}
 
@@ -1500,27 +1579,10 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			ScoreType compareHin = std::numeric_limits<ScoreType>::max();
 			regfile[20] = compareHin;
 
-/* 			// Debug Logging Block
-				if (enableCalculateNodeInnerDebug == true) {
-					std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-					dbg << " compareHin Definition: " << compareHin << std::endl;
-					dbg.close();
-				}
-			// End of Debug Logging Block */
-
 			if (previousSlice.exists)
 			{
 				// compareHin = previousSlice.startSlice.scoreEnd;
 				regfile[20] = previousSlice.startSlice.scoreEnd;
-
-/* 				// Debug Logging Block
-				if (enableCalculateNodeInnerDebug == true) {
-					std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-					dbg << " compareHin Exists: " << compareHin << std::endl;
-					dbg.close();
-				}
-				// End of Debug Logging Block */
-
 			}
 
 			if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
@@ -1529,27 +1591,11 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 				regfile[21] = extraSlice.getScoreBeforeStart();
 				regfile[20] = (regfile[20] < regfile[21]) ? regfile[20] : regfile[21];
-
-/* 				// Debug Logging Block
-				if (enableCalculateNodeInnerDebug == true) {
-					std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-					dbg << " compareHin Minimum: " << compareHin << std::endl;
-					dbg.close();
-				}
-				// End of Debug Logging Block */
-
 			}
 
 			ScoreType incomingScoreBeforeStart = inc.incoming.getScoreBeforeStart();
 
 			regfile[21] = incomingScoreBeforeStart;
-/* 			// Debug Logging Block
-				if (enableCalculateNodeInnerDebug == true) {
-					std::ofstream dbg("GbvCallTrace.log", std::ios::app);
-					dbg << " incScore: " << incomingScoreBeforeStart << std::endl;
-					dbg.close();
-				}
-			// End of Debug Logging Block */
 
 			// if (compareHin < incomingScoreBeforeStart)
 			// {
