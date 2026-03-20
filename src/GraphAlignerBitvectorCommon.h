@@ -438,8 +438,8 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		          getNextSliceIteration,
 		          [&](std::ostream& dbg) {
 			          dbg << DBG_BITS("Eq", Eq)
-			              << "\n  hinP=" << hinP
-			              << "\n  hinN=" << hinN
+			              << "\n  hinP=" << regfile[5]
+			              << "\n  hinN=" << regfile[4]
 			              << DBG_BITS("slice.VN", slice.VN)
 			              << DBG_BITS("slice.VP", slice.VP)
 			              << "\n  slice.scoreEnd=" << slice.scoreEnd;
@@ -749,6 +749,8 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			WordSlice fakeSlice { WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllZeros, std::numeric_limits<ScoreType>::max() };
 			WordSlice seedstartSlice = getSeedSlice(slice.slices[currentSlice].j, sequence.size(), params);
 			WordSlice extraSlice = slice.slices[currentSlice].seedstartNodes.count(node) == 1 ? seedstartSlice : fakeSlice;
+			//WordSlice extraSlice = slice.slices[currentSlice].seedstartNodes.count(node) == 1 ? fakeSlice : fakeSlice;
+
 			const typename NodeSlice<LengthType, ScoreType, Word, false>::NodeSliceMapItem& nodeInfo = slice.slices[currentSlice].scores.node(node);
 			std::vector<WordSlice> nodeSlices = recalcNodeWordslice(params, node, nodeInfo, EqV, previous, sliceConsistency, extraSlice, slice.slices[currentSlice].j);
 			assert(nodeSlices[0].scoreEnd == nodeInfo.startSlice.scoreEnd);
@@ -859,6 +861,8 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		WordSlice seedstartSlice { WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllZeros, std::numeric_limits<ScoreType>::max() };
 		if (multiseed) seedstartSlice = getSeedSlice(slice.slices[bestIndex].j, sequence.size(), params);
 		WordSlice extraSlice = slice.slices[bestIndex].seedstartNodes.count(node) == 1 ? seedstartSlice : fakeSlice;
+		//WordSlice extraSlice = slice.slices[bestIndex].seedstartNodes.count(node) == 1 ? fakeSlice : fakeSlice;
+
 		std::vector<WordSlice> nodeSlices = recalcNodeWordslice(params, node, slice.slices[bestIndex].scores.node(node), EqV, previous, sliceConsistency, extraSlice, slice.slices[bestIndex].j);
 
 		size_t nodeOffset = std::numeric_limits<size_t>::max();
@@ -1560,12 +1564,26 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			{
 				if (!hasWs)
 				{
+					DEBUG_LOG("has SkipFirst",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | set hasWs = true";
+				          },
+				          false);
 					ws = inc.incoming;
 					hasWs = true;
 				}
 				else
 				{
-					ws = ws.mergeWith(inc.incoming);
+					DEBUG_LOG("calculateNodeInner - mergeWith skipFirst",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | Merging multiple skipFirst edges";
+				          },
+				          false);
+				ws = ws.mergeWith(inc.incoming);
 				}
 				continue;
 			}
@@ -1581,12 +1599,26 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 			if (previousSlice.exists)
 			{
+					DEBUG_LOG("has previousSlice for score",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | set score";
+				          },
+				          false);
 				// compareHin = previousSlice.startSlice.scoreEnd;
 				regfile[20] = previousSlice.startSlice.scoreEnd;
 			}
 
 			if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
 			{
+						DEBUG_LOG("score is not infinity",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | set score";
+				          },
+				          false);
 				// compareHin = std::min(compareHin, extraSlice.getScoreBeforeStart());
 
 				regfile[21] = extraSlice.getScoreBeforeStart();
@@ -1636,14 +1668,36 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			compareHin = regfile[20];
 
 			WordSlice newWs;
-			// std::tie(newWs, hinP, hinN) = getNextSlice(Eq, inc.incoming, hinP, hinN);
-			std::tie(newWs, regfile[5], regfile[4]) = getNextSlice(Eq, inc.incoming, regfile[5], regfile[4]);
+			DEBUG_LOG("calculateNodeInner - getNextSlice",
+			          enableCalculateNodeInnerDebug,
+			          calculateNodeInnerIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << " | Calling getNextSlice for non-skipFirst edge";
+			          },
+			          false);
+			std::tie(newWs, hinP, hinN) = getNextSlice(Eq, inc.incoming, hinP, hinN);
+
+			// std::tie(newWs, regfile[5], regfile[4]) = getNextSlice(Eq, inc.incoming, regfile[5], regfile[4]);
+
+			// if (!previousSlice.exists || newWs.getScoreBeforeStart() < previousSlice.startSlice.scoreEnd)
+			// {
+			// 	newWs.VP &= WordConfiguration<Word>::AllOnes ^ 1;
+			// 	newWs.VN |= 1;
+			// }
 
 			if (!previousSlice.exists || newWs.getScoreBeforeStart() < previousSlice.startSlice.scoreEnd)
 			{
-				newWs.VP &= WordConfiguration<Word>::AllOnes ^ 1;
-				newWs.VN |= 1;
+				// Clear bit 0 of VP: VP &= ~1
+				regfile[3] = regfile[3] & (WordConfiguration<Word>::AllOnes ^ 1);
+
+				// Set bit 0 of VN: VN |= 1
+				regfile[2] = regfile[2] | 1;
+
+				// Write back to newWs
+				newWs.VP = regfile[3];
+				newWs.VN = regfile[2];
 			}
+
 			// assert(newWs.getScoreBeforeStart() >= debugLastRowMinScore || newWs.getScoreBeforeStart() >= extraSlice.getScoreBeforeStart());
 			if (!hasWs)
 			{
@@ -1652,6 +1706,13 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			}
 			else
 			{
+				DEBUG_LOG("calculateNodeInner - mergeWith non-skipFirst",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | Merging non-skipFirst edges after getNextSlice";
+				          },
+				          false);
 				ws = ws.mergeWith(newWs);
 			}
 		}
@@ -1660,6 +1721,13 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 		if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
 		{
+			DEBUG_LOG("calculateNodeInner - mergeWith extraSlice",
+			          enableCalculateNodeInnerDebug,
+			          calculateNodeInnerIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << " | Merging with extraSlice (seed hit)";
+			          },
+			          false);
 			ws = ws.mergeWith(extraSlice);
 		}
 
@@ -1672,8 +1740,24 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 
 		if (!forceCalculation && slice.exists)
 		{
+			        DEBUG_LOG("calculateNodeInner - slice already exists",                                                                                                                                                                                                                                                                                                                                                          
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,                                                                                                                                                                                                                                                                                                                                                                          
+                  [&](std::ostream& dbg) {                                                                                                                                                                                                                                                                                                                                                                              
+                          dbg << " | Slice already calculated, checking early exit";                                                                                                                                                                                                                                                                                                                                    
+                  },                                                                                                                                                                                                                                                                                                                                                                                                    
+                  false);      
+
 			if (hasSkipless && params.graph.InNeighbors(i).size() == 1 && bandCheck(params.graph.InNeighbors(i)[0]))
 			{
+				        DEBUG_LOG("calculateNodeInner - single InNeighbor check",                                                                                                                                                                                                                                                                                                                                                       
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,                                                                                                                                                                                                                                                                                                                                                                          
+                  [&](std::ostream& dbg) {                                                                                                                                                                                                                                                                                                                                                                              
+                          dbg << " | Has skipless edges and single in-neighbor";                                                                                                                                                                                                                                                                                                                                        
+                  },                                                                                                                                                                                                                                                                                                                                                                                                    
+                  false); 
+
 				if (ws.scoreEnd > slice.startSlice.scoreEnd)
 				{
 #ifdef EXTRACORRECTNESSASSERTIONS
@@ -1738,6 +1822,14 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			}
 			else
 			{
+				DEBUG_LOG("calculateNodeInner - mergeWith slice.startSlice",                                                                                                                                                                                                                                                                                                                                                    
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,
+                  [&](std::ostream& dbg) {
+                          dbg << " | Testing early exit condition";
+                  },
+                  false);
+
 				WordSlice test = ws.mergeWith(slice.startSlice);
 				if (test.scoreEnd == slice.startSlice.scoreEnd && test.VP == slice.startSlice.VP && test.VP == slice.startSlice.VN)
 				{
@@ -1751,7 +1843,14 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		{
 			if (ws.getScoreBeforeStart() > previousSlice.startSlice.scoreEnd)
 			{
-				ws = ws.mergeWith(getSourceSliceFromScore(previousSlice.startSlice.scoreEnd));
+				DEBUG_LOG("calculateNodeInner - mergeWith previousSlice adjustment",
+			          enableCalculateNodeInnerDebug,
+			          calculateNodeInnerIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << " | Adjusting ws with previousSlice score";
+			          },
+			          false);
+			ws = ws.mergeWith(getSourceSliceFromScore(previousSlice.startSlice.scoreEnd));
 			}
 		}
 
@@ -1773,6 +1872,14 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			assert(scoreBefore <= scoreComparison);
 			if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
 			{
+				DEBUG_LOG("calculateNodeInner - extraSlice valid",                                                                                                                                                                                                                                                                                                                                                              
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,
+                  [&](std::ostream& dbg) {
+                          dbg << " | Processing with valid extraSlice (has seed info)";
+                  },
+                  false);
+
 				scoreBefore = std::min(scoreBefore, extraSlice.getScoreBeforeStart());
 				assert(scoreBefore <= extraSlice.getScoreBeforeStart());
 				assert(scoreBefore <= ws.getScoreBeforeStart());
@@ -1823,6 +1930,14 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			}
 			else if (scoreBefore < scoreComparison)
 			{
+				DEBUG_LOG("calculateNodeInner - scoreBefore < scoreComparison",                                                                                                                                                                                                                                                                                                                                                 
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,
+                  [&](std::ostream& dbg) {
+                          dbg << " | No extraSlice, adjusting forceMask";
+                  },
+                  false);
+
 				size_t fixoffset = 1;
 				forceMask |= (Word)1;
 				for (size_t fixchunk = 0; fixchunk < slice.NUM_CHUNKS; fixchunk++)
@@ -1856,40 +1971,79 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 		}
 		else
 		{
+			DEBUG_LOG("calculateNodeInner - no previousSlice",                                                                                                                                                                                                                                                                                                                                                              
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                                                                      
+                  calculateNodeInnerIteration,
+                  [&](std::ostream& dbg) {
+                          dbg << " | No previous slice exists, forcing all Eq bits";
+                  },
+                  false);
+
 			forceMask = WordConfiguration<Word>::AllOnes;
 		}
+
 		if (ws.scoreEnd < result.minScore)
 		{
 			result.minScore = ws.scoreEnd;
 			result.minScoreNodeOffset = pos;
 		}
+		
 		bool endIncomparable = forceMask & ((Word)1 << (Word)(nodeLength-1));
 		slice.startSlice = ws;
 		if constexpr (!AllowEarlyLeave) callback(ws);
 		slice.exists = true;
 		Word forceEq = WordConfiguration<Word>::AllOnes;
-		Word hinP, hinN;
-		if (!previousSlice.exists) forceEq ^= 1;
-		size_t smallChunk = 0;
-		size_t offset = 1;
+		// regfile[20] = forceEq;
+
+		Word hinP, hinN;                                                                                                                                                                                                                                                                                                                                                             
+		if (!previousSlice.exists) forceEq ^= 1;                                                                                                                                                                                                                                                                                                                                     
+		// if (!previousSlice.exists) regfile[20] ^= 1;                                                                                                                                                                                                                                                                                                                              
+																																																																																													
+		// Loop initialization: process node in 32-character chunks                                                                                                                                                                                                                                                                                                                  
+		size_t smallChunk = 0;        // Chunk index (each chunk = 32 chars)
+		size_t offset = 1;            // Position within chunk (skip pos 0)
 		pos = smallChunk * (WordConfiguration<Word>::WordSize / 2) + offset;
+
+		// Main loop: iterate through each 32-char chunk of the node
 		for (; smallChunk < params.graph.CHUNKS_IN_NODE; smallChunk++)
 		{
-			size_t bigChunk = smallChunk / 2;
-			size_t bigChunkOffset = (smallChunk % 2) * (WordConfiguration<Word>::WordSize / 2);
-			Word HP = fixedHP[bigChunk] >> bigChunkOffset;
-			Word HN = fixedHN[bigChunk] >> bigChunkOffset;
-			auto charChunk = nodeChunks[smallChunk];
-			HP >>= offset;
-			HN >>= offset;
-			charChunk >>= offset * 2;
-			forceMask >>= offset;
-			for (; offset < WordConfiguration<Word>::WordSize / 2 && pos < nodeLength; offset++)
-			{
-				Eq = EqV.getEqI(charChunk & 3);
-				Eq &= forceEq;
-				Word newHP;
-				Word newHN;
+				// HP/HN are stored in 64-bit words, so 2 smallChunks per bigChunk
+				size_t bigChunk = smallChunk / 2;           // Which 64-bit word (0, 0, 1, 1, 2, 2, ...)
+				size_t bigChunkOffset = (smallChunk % 2) * (WordConfiguration<Word>::WordSize / 2);  // 0 or 32
+
+				// Extract 32-bit horizontal values for this chunk
+				// If smallChunk is even: use low 32 bits (offset=0)
+				// If smallChunk is odd: use high 32 bits (offset=32)
+				Word HP = fixedHP[bigChunk] >> bigChunkOffset;  // Shift to get relevant 32 bits
+				Word HN = fixedHN[bigChunk] >> bigChunkOffset;
+
+				// Get DNA character encoding for this chunk (32 characters, 2 bits each)
+				auto charChunk = nodeChunks[smallChunk];
+
+				// Process each character in this chunk (continues below)...
+
+			// Align all values to start at current offset position                                                                                                                                                                                                                                                                                                                      
+			HP >>= offset;           // Shift horizontal values to position 0                                                                                                                                                                                                                                                                                                            
+			HN >>= offset;                                                                                                                                                                                                                                                                                                                                                               
+			charChunk >>= offset * 2;  // Shift character encoding (2 bits per char)                                                                                                                                                                                                                                                                                                   
+			forceMask >>= offset;    // Shift force mask                                                                                                                                                                                                                                                                                                                                 
+
+		// Inner loop: process each character (base pair) in this chunk
+		for (; offset < WordConfiguration<Word>::WordSize / 2 && pos < nodeLength; offset++)
+		//     Process up to 32 chars per chunk              Stop at node end
+		{
+			// Extract 2-bit DNA encoding for current character (A=00, C=01, G=10, T=11)
+			// regfile[1] = EqV.getEqI(charChunk & 3);
+			// regfile[1] &= regfile[20];
+
+			// Get match vector (Eq) for current node character vs all read positions
+			Eq = EqV.getEqI(charChunk & 3);  // charChunk & 3 extracts bottom 2 bits
+			Eq &= forceEq;                    // Apply force mask (clear bits where forced)
+
+			Word newHP;  // Output: horizontal plus after this character
+			Word newHN;  // Output: horizontal negative after this character
+
+			// Calculate next DP state for this character position (continues below)...
 
 					// DEBUG
 		DEBUG_LOG("NodeInner Eq Second",
@@ -1899,15 +2053,48 @@ static __attribute__((noinline)) std::tuple<WordSlice, Word, Word> getNextSlice(
 			          dbg << DBG_BITS("Eq", Eq);
 		          },
 		          false);  // Don't increment - supplementary log for calculateNodeInner
-				std::tie(newWs, newHP, newHN) = getNextSlice(Eq, ws, HP & 1, HN & 1);
+
+				  
+				DEBUG_LOG("calculateNodeInner - getNextSlice (loop)",
+			          enableCalculateNodeInnerDebug,
+			          calculateNodeInnerIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << " | Calling getNextSlice in node processing loop";
+			          },
+			          false);
+			DEBUG_LOG("calculateNodeInner - HP/HN before getNextSlice",
+			          enableCalculateNodeInnerDebug,
+			          calculateNodeInnerIteration,
+			          [&](std::ostream& dbg) {
+				          dbg << DBG_BITS("HP", HP) << DBG_BITS("HN", HN);
+			          },
+			          false);
+			std::tie(newWs, newHP, newHN) = getNextSlice(Eq, ws, HP & 1, HN & 1);
+				// std::tie(newWs, newHP, newHN) = getNextSlice(regfile[1], ws, HP & 1, HN & 1);
+
 				if (forceMask & 1)
 				{
+					        DEBUG_LOG("calculateNodeInner - forceMask bit 0 set",                                                                                                                                                                                                                                                                                                                  
+                  enableCalculateNodeInnerDebug,                                                                                                                                                                                                                                                                                                                             
+                  calculateNodeInnerIteration,                                                                                                                                                                                                                                                                                                                                 
+                  [&](std::ostream& dbg) {
+                          dbg << " | Forcing VP/VN adjustment at position 0";
+                  },
+                  false);
+				  
 					newWs.VP &= WordConfiguration<Word>::AllOnes ^ 1;
 					newWs.VN |= 1;
 				}
 				if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
 				{
-					newWs = newWs.mergeWith(extraSlice);
+					DEBUG_LOG("calculateNodeInner - mergeWith extraSlice (loop)",
+				          enableCalculateNodeInnerDebug,
+				          calculateNodeInnerIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | Merging newWs with extraSlice in node loop";
+				          },
+				          false);
+				newWs = newWs.mergeWith(extraSlice);
 					assert(newWs.scoreEnd >= ws.scoreEnd-1);
 					assert(newWs.scoreEnd <= ws.scoreEnd+1);
 					hinP = newWs.scoreEnd == ws.scoreEnd+1 ? 1 : 0;

@@ -89,7 +89,7 @@ public:
 
 void printGraphStructureForNodes(const std::vector<size_t>& nodeIds) const {
     const AlignmentGraph& graph = params.graph;
-    std::ofstream out("current_slice_nodes.txt", std::ios::app); // append mode
+    std::ofstream out("FirstGraphNodes.log", std::ios::app); // append mode
     out << "Printing info for " << nodeIds.size() << " nodes in current slice:" << std::endl;
     for (size_t nodeId : nodeIds) {
         out << "Node " << nodeId << ": ";
@@ -566,7 +566,9 @@ private:
 		WordSlice fakeSlice { WordConfiguration<Word>::AllZeros, WordConfiguration<Word>::AllZeros, std::numeric_limits<ScoreType>::max() };
 		ScoreType currentMinScoreAtEndRow = result.minScore;
 
-		// Main Queue Here 
+		// Main Queue Here
+		// Print specific nodes from call #1
+		printGraphStructureForNodes(std::vector<size_t>{69820, 69816, 69830, 69831, 69819});
 
 		while (calculableQueue.size() > 0)
 		{
@@ -577,6 +579,12 @@ private:
 		          calculateSliceIteration,
 		          [&](std::ostream& dbg) {
 			          dbg << " | calculableQueue.size()=" << calculableQueue.size();
+			          // calculableQueue.forEachItem([&](size_t priority, const auto& item) {
+				      //     dbg << "\n    [priority=" << priority
+				      //         << " target=" << item.target
+				      //         << " incoming.scoreEnd=" << item.incoming.scoreEnd
+				      //         << " skipFirst=" << (int)item.skipFirst << "]";
+			          // });
 		          },
 		          false);  // Don't increment - supplementary log for calculateSlice
 		// --- End debug logging block ---
@@ -619,7 +627,23 @@ private:
 			auto oldEnd = thisNode.endSlice;
 			if (!thisNode.exists) oldEnd = { 0, 0, std::numeric_limits<ScoreType>::max() };
 			WordSlice extraSlice = hasSeedStart[i] ? seedstartSlice : fakeSlice;
-			if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max()) oldEnd = oldEnd.mergeWith(extraSlice);
+			//WordSlice extraSlice = hasSeedStart[i] ? fakeSlice : fakeSlice;
+
+			// EXTRA SLICE SET HERE
+			if (extraSlice.scoreEnd != std::numeric_limits<ScoreType>::max())
+			{
+				DEBUG_LOG("extraSliceMerge",
+				          enableCalculateSliceDebug,
+				          calculateSliceIteration,
+				          [&](std::ostream& dbg) {
+					          dbg << " | Node=" << i
+					              << " | extraSlice.scoreEnd=" << extraSlice.scoreEnd
+					              << " | extraSlice.VP=" << extraSlice.VP
+					              << " | extraSlice.VN=" << extraSlice.VN;
+				          },
+				          false);  // Don't increment - supplementary log
+				oldEnd = oldEnd.mergeWith(extraSlice);
+			}
 			typename NodeSlice<LengthType, ScoreType, Word, HasVectorMap>::NodeSliceMapItem previousThisNode;
 
 			if (previousBand[i])
@@ -727,6 +751,12 @@ private:
 		          calculateSliceIteration,
 		          [&](std::ostream& dbg) {
 			          dbg << " | calculableQueue.size()=" << calculableQueue.size();
+			          // calculableQueue.forEachItem([&](size_t priority, const auto& item) {
+				      //     dbg << "\n    [priority=" << priority
+				      //         << " target=" << item.target
+				      //         << " incoming.scoreEnd=" << item.incoming.scoreEnd
+				      //         << " skipFirst=" << (int)item.skipFirst << "]";
+			          // });
 		          },
 		          false);  // Don't increment - end log for calculateSlice
 		// --- End debug logging block ---
@@ -1151,13 +1181,13 @@ private:
 				          auto nodeId = nodeEntry.first;
 				          auto nodeLen = params.graph.NodeLength(nodeId);
 				          std::string nodeSeq = "";
-				          for (size_t i = 0; i < std::min(nodeLen, (size_t)50); i++)
+				          for (size_t i = 0; i < std::min(nodeLen, (size_t)75); i++)
 				          {
 					          char c = params.graph.NodeSequences(nodeId, i);
 					          nodeSeq += c;
 				          }
-				          if (nodeLen > 50) nodeSeq += "...";
-				          
+				          if (nodeLen > 75) nodeSeq += "...";
+
 				          dbg << "\n    Node[" << nodeEntry.first << "] len=" << nodeLen << " seq=" << nodeSeq
 				              << " | endSlice.scoreEnd=" << nodeEntry.second.endSlice.scoreEnd
 				              << " | startSlice.scoreEnd=" << nodeEntry.second.startSlice.scoreEnd

@@ -5,25 +5,25 @@
 bool enableCalculateSliceDebug = true;
 uint64_t calculateSliceIteration = 0;
 
-bool enableGetNextSliceDebug = false;
+bool enableGetNextSliceDebug = true;
 uint64_t getNextSliceIteration = 0;
 
-bool enableCalculateNodeClipPreciseDebug = false;
+bool enableCalculateNodeClipPreciseDebug = true;
 uint64_t calculateNodeClipPreciseIteration = 0;
 
-bool enableCalculateNodeInnerDebug = false;
+bool enableCalculateNodeInnerDebug = true;
 uint64_t calculateNodeInnerIteration = 0;
 
-bool enableGetScoreBeforeStartDebug = false;
+bool enableGetScoreBeforeStartDebug = true;
 uint64_t getScoreBeforeStartIteration = 0;
 
-bool enableMergeTwoSlices2InputDebug = false;
+bool enableMergeTwoSlices2InputDebug = true;
 uint64_t mergeTwoSlices2InputIteration = 0;
 
-bool enableMergeTwoSlices4InputDebug = false;
+bool enableMergeTwoSlices4InputDebug = true;
 uint64_t mergeTwoSlices4InputIteration = 0;
 
-bool enableDifferenceMasksBitTwiddleDebug = false;
+bool enableDifferenceMasksBitTwiddleDebug = true;
 uint64_t differenceMasksBitTwiddleIteration = 0;
 
 uint64_t EqVectorIteration = 0;
@@ -32,13 +32,13 @@ uint64_t EqVectorIteration = 0;
 bool enableGetMultiseedSlicesDebug = true;
 uint64_t getMultiseedSlicesIteration = 0;
 
-bool enablePickMethodAndExtendFillDebug = false;
+bool enablePickMethodAndExtendFillDebug = true;
 uint64_t pickMethodAndExtendFillIteration = 0;
 
-bool enableFillDPSliceDebug = false;
+bool enableFillDPSliceDebug = true;
 uint64_t fillDPSliceIteration = 0;
 
-bool enableGetSeedSliceDebug = false;
+bool enableGetSeedSliceDebug = true;
 uint64_t getSeedSliceIteration = 0;
 
 bool debugTop = true;
@@ -68,7 +68,7 @@ void DEBUG_LOG(const std::string& functionName,
 
 // Check if all debug iterations have reached the threshold (3) and disable all flags
 void checkAndDisableAllDebugFlags() {
-	const uint64_t THRESHOLD = 999999999999999999;
+	const uint64_t THRESHOLD = 5;
 
 	if (calculateSliceIteration >= THRESHOLD &&
 	    getNextSliceIteration >= THRESHOLD &&
